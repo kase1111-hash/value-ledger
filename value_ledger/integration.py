@@ -62,10 +62,20 @@ class IntentLogConnector:
         self.active_intents[event.intent_id] = event.timestamp
         print(f"[ValueLedger] Intent started: {event.intent_id}")
 
-       def _on_intent_completed(self, event: IntentEvent):
-        # ... existing setup ...
+    def _on_intent_completed(self, event: IntentEvent):
+        """Process completed/abandoned intent and accrue value"""
+        # Calculate duration
+        start_time = self.active_intents.get(event.intent_id, event.timestamp - 3600)
+        end_time = event.timestamp
 
-        # === NEW: Memory Vault integration ===
+        # Build rich scoring context from event
+        content_for_analysis = ""
+        if event.human_reasoning:
+            content_for_analysis += event.human_reasoning + "\n"
+        if event.agent_output:
+            content_for_analysis += event.agent_output
+
+        # === Memory Vault integration for novelty scoring ===
         from .memory_vault_hook import MemoryVaultHook
 
         mv_hook = MemoryVaultHook()
@@ -75,31 +85,7 @@ class IntentLogConnector:
             memory_hash=event.memory_hash,
         )
 
-        ctx = ScoringContext(
-            # ... existing fields ...
-            memory_content=content_for_analysis or None,
-            previous_memories=novelty_context,  # ← Now real data!
-            # ...
-        )
-
-        # Optional: store raw content temporarily for later reassessment
-        metadata = {
-            # ... existing ...
-            "raw_content_for_novelty": content_for_analysis if mv_hook.can_access_content(event.intent_id) else None,
-        }
-
-        entry_id = self.ledger.accrue_with_heuristics(ctx=ctx, metadata=metadata)
-
-        # Optional: register for future reassessment on new memories
-        # mv_hook.register_for_reassessment(event.intent_id)  # future
-
-        # Build rich scoring context from event
-        content_for_analysis = ""
-        if event.human_reasoning:
-            content_for_analysis += event.human_reasoning + "\n"
-        if event.agent_output:
-            content_for_analysis += event.agent_output
-
+        # Build full scoring context
         ctx = ScoringContext(
             intent_id=event.intent_id,
             start_time=start_time,
@@ -110,22 +96,27 @@ class IntentLogConnector:
             memory_hash=event.memory_hash,
             outcome_tags=event.outcome_tags or [],
             risk_level=event.risk_level,
-            # previous_memories would come from Memory Vault query — stub for now
-            previous_memories=None,
+            previous_memories=novelty_context,  # Real data from Memory Vault
             user_override=None,  # Could allow human to tweak post-completion
         )
 
-        # Auto-accrue using full heuristic engine
-        entry_id = self.ledger.accrue_with_heuristics(
-            ctx=ctx,
-            metadata={
-                "event_type": event.event_type,
-                "outcome_tags": event.outcome_tags,
-                "source": "IntentLog",
-                **(event.metadata or {}),
-            }
-        )
+        # Store raw content temporarily for later reassessment (if permitted)
+        metadata = {
+            "event_type": event.event_type,
+            "outcome_tags": event.outcome_tags,
+            "source": "IntentLog",
+            "raw_content_for_novelty": content_for_analysis if mv_hook.can_access_content(event.intent_id) else None,
+            **(event.metadata or {}),
+        }
 
+        # Auto-accrue using full heuristic engine
+        entry_id = self.ledger.accrue_with_heuristics(ctx=ctx, metadata=metadata)
+
+        # Clean up tracking
+        if event.intent_id in self.active_intents:
+            del self.active_intents[event.intent_id]
+
+        # Log results
         current_value = self.ledger.current_value_for_intent(event.intent_id)
         print(f"[ValueLedger] Accrued value for {event.intent_id}")
         print(f"           Entry: {entry_id[:8]}... | Total: {current_value.total():.1f}")
