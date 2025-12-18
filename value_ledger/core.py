@@ -12,9 +12,12 @@ import time
 import hashlib
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field, validator
+from typing import Dict, List, Optional, Any, TYPE_CHECKING
+from pydantic import BaseModel, Field, field_validator, model_validator
 import os
+
+if TYPE_CHECKING:
+    from .heuristics import ScoringContext
 
 # Placeholder for future imports from common utils
 def generate_entry_id(data: str) -> str:
@@ -50,7 +53,7 @@ class ValueVector(BaseModel):
 
 
 class LedgerEntry(BaseModel):
-    id: str
+    id: Optional[str] = None
     timestamp: float = Field(default_factory=time.time)
     intent_id: str
     memory_hash: Optional[str] = None  # Reference to encrypted memory in Memory Vault
@@ -60,13 +63,13 @@ class LedgerEntry(BaseModel):
     correction_notes: Optional[Dict[str, Any]] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
-    @validator("id", pre=True, always=True)
-    def ensure_id(cls, v, values):
-        if v:
-            return v
-        # Fallback deterministic ID
-        data = f"{values.get('intent_id')}_{values.get('timestamp')}"
-        return generate_entry_id(data)
+    @model_validator(mode='after')
+    def ensure_id(self):
+        if not self.id:
+            # Fallback deterministic ID generation
+            data = f"{self.intent_id}_{self.timestamp}"
+            self.id = generate_entry_id(data)
+        return self
 
 
 class ValueLedger:
