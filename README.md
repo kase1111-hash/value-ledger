@@ -52,6 +52,12 @@ Interactions with IntentLog, Memory Vault, and Learning Contracts
 Threat model and proofs
 Explicit non-goals (no tokens, no markets)
 
+## Quick Start (Development)
+
+```bash
+pip install -e .
+python -m value_ledger.cli
+
 License
 This project is licensed under the GNU General Public License v3.0 — see the LICENSE file for details.
 
