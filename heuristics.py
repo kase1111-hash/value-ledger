@@ -1,172 +1,205 @@
 # value_ledger/heuristics.py
 """
-Heuristic scorers for the Value Ledger.
-Each scorer returns a partial or full ValueVector contribution.
+Advanced heuristic scorers for the Value Ledger.
+Each scorer contributes to the T/E/N/F/R/S vector based on cognitive effort signals.
+Now fully integrated with Memory Vault for accurate novelty assessment.
 """
 
 from __future__ import annotations
 
 import time
+import math
 from dataclasses import dataclass
-from typing import Dict, Optional, Any, Callable
-from pathlib import Path
+from typing import List, Tuple, Optional, Dict, Any
 
 from .core import ValueVector
 
 
 @dataclass
 class ScoringContext:
-    """Everything a scorer might need from other modules"""
+    """Rich context gathered from IntentLog, Memory Vault, Boundary Daemon, etc."""
     intent_id: str
     start_time: float
     end_time: Optional[float] = None
-    interruptions: int = 0                    # From Boundary Daemon
-    keystrokes: Optional[int] = None          # From input monitoring
+    interruptions: int = 0
+    keystrokes: Optional[int] = None
+    memory_content: Optional[str] = None          # Combined human + agent text
     memory_hash: Optional[str] = None
-    memory_content: Optional[str] = None      # Only if explicitly allowed by Learning Contracts
-    previous_memories: Optional[list] = None  # List of (hash, timestamp, content) tuples
-    outcome_tags: Optional[list[str]] = None  # e.g., ["success", "partial", "dead_end"]
-    risk_level: Optional[float] = None       # 0.0–1.0 from Learning Contracts or human input
-    user_override: Optional[Dict[str, float]] = None
+    previous_memories: Optional[List[Tuple[str, float, Optional[str]]]] = None  # (hash, ts, content)
+    outcome_tags: Optional[List[str]] = None
+    risk_level: Optional[float] = None            # 0.0–1.0 explicit
+    user_override: Optional[Dict[str, float]] = None  # Human tweaks (+/-)
 
 
 class HeuristicScorer:
-    """Base class – makes it easy to add new scorers"""
+    """Base class for all scorers"""
     def __call__(self, ctx: ScoringContext) -> ValueVector:
         raise NotImplementedError
 
 
-# ————————————————————————
-# Individual Heuristic Scorers
-# ————————————————————————
+# ==================== Individual Scorers ====================
 
 class TimeScorer(HeuristicScorer):
-    """T = raw duration with diminishing returns"""
+    """T: Duration with diminishing returns — values sustained focus"""
     def __call__(self, ctx: ScoringContext) -> ValueVector:
         if not ctx.end_time:
             return ValueVector(t=0.0)
+
         duration_hours = (ctx.end_time - ctx.start_time) / 3600.0
-        # Logarithmic scaling: first hour worth more than 10th hour
-        t = min(10.0, 2.0 * (duration_hours ** 0.6))
-        return ValueVector(t=max(0.1, t))  # minimum 0.1 even for tiny sessions
+        if duration_hours <= 0:
+            return ValueVector(t=0.1)  # minimum for instant intents
+
+        # Concave scaling: first hour most valuable
+        t = 8.0 * math.log1p(duration_hours * 2)   # ~8 at 1h, ~12 at 4h, caps naturally
+        return ValueVector(t=max(0.5, min(15.0, t)))
 
 
 class EffortScorer(HeuristicScorer):
-    """E = time × interruption penalty + input density"""
+    """E: Intensity — combines interruptions, input density, and flow breaks"""
     def __call__(self, ctx: ScoringContext) -> ValueVector:
-        base = TimeScorer()(ctx).t
-        if base == 0:
+        base_time = TimeScorer()(ctx).t
+        if base_time < 0.5:
             return ValueVector(e=0.0)
 
-        # Interruption penalty (context switching is expensive)
-        interruption_penalty = 1.0 + (ctx.interruptions * 0.4)
-        
-        # Input density bonus (keystrokes per hour)
+        # Interruption cost (context switching tax)
+        interruption_factor = 1.0 + (ctx.interruptions * 0.35)
+        if ctx.interruptions > 10:
+            interruption_factor += (ctx.interruptions - 10) * 0.1  # escalating
+
+        # Input density bonus (productive typing)
         density_bonus = 1.0
         if ctx.keystrokes and ctx.end_time:
             duration_hours = (ctx.end_time - ctx.start_time) / 3600.0
             kph = ctx.keystrokes / max(duration_hours, 0.1)
-            if kph > 800:
-                density_bonus = 1.3
-            elif kph > 400:
-                density_bonus = 1.15
+            if kph > 1000:
+                density_bonus = 1.4
+            elif kph > 600:
+                density_bonus = 1.2
+            elif kph < 200:
+                density_bonus = 0.8  # slow = possibly stuck/thinking hard
 
-        e = base * interruption_penalty * density_bonus
-        return ValueVector(e=min(20.0, e))
+        e = base_time * interruption_factor * density_bonus
+        return ValueVector(e=min(22.0, e))
 
 
 class NoveltyScorer(HeuristicScorer):
-    """N = inverse of similarity to existing memory corpus"""
+    """N: True uniqueness against personal memory corpus — now Memory Vault powered"""
     def __call__(self, ctx: ScoringContext) -> ValueVector:
-        if not ctx.previous_memories or ctx.memory_content is None:
-            return ValueVector(n=5.0)  # default medium novelty if no data
+        prev = ctx.previous_memories or []
+        content = ctx.memory_content
 
-        # Simple TF-IDF-like novelty (replace with embeddings later)
-        content = ctx.memory_content.lower()
+        # No content access (consent denied or empty) → conservatively high novelty
+        if not content or not prev:
+            return ValueVector(n=8.5)
+
+        current_words = set(content.lower().split())
+        if len(current_words) < 5:  # too short to assess
+            return ValueVector(n=7.0)
+
         similarities = []
-        for _, _, prev_content in ctx.previous_memories[-50:]:  # recent context window
+        for _, _, prev_content in prev:
             if not prev_content:
                 continue
-            overlap = len(set(content.split()) & set(prev_content.lower().split()))
-            union = len(set(content.split()) | set(prev_content.lower().split()))
-            similarities.append(overlap / union if union else 0.0)
+            prev_words = set(prev_content.lower().split())
+            if not prev_words:
+                continue
+            # Jaccard similarity with smoothing
+            intersection = len(current_words & prev_words)
+            union = len(current_words | prev_words)
+            jaccard = intersection / union if union > 0 else 0.0
+            similarities.append(jaccard)
 
-        avg_similarity = sum(similarities) / len(similarities) if similarities else 0.0
-        novelty = 10.0 * (1.0 - avg_similarity)
-        return ValueVector(n=max(0.5, novelty))
+        if not similarities:
+            return ValueVector(n=9.0)
+
+        avg_similarity = sum(similarities) / len(similarities)
+        # Non-linear: small overlaps don't kill novelty, high overlap does
+        novelty = 10.0 * (1.0 - math.pow(avg_similarity, 0.8))
+        return ValueVector(n=max(1.0, novelty))
 
 
 class FailureScorer(HeuristicScorer):
-    """F = higher when outcome is dead-end or partial"""
+    """F: Learning value from dead ends and partial outcomes"""
     def __call__(self, ctx: ScoringContext) -> ValueVector:
-        if not ctx.outcome_tags:
-            return ValueVector(f=0.0)
+        tags = {t.lower() for t in (ctx.outcome_tags or [])}
 
-        tags = {t.lower() for t in ctx.outcome_tags}
         if "dead_end" in tags or "failure" in tags:
-            return ValueVector(f=8.0)
-        if "partial" in tags:
-            return ValueVector(f=4.0)
-        return ValueVector(f=1.0)  # even success has tiny learning value
+            return ValueVector(f=9.0)
+        if "partial" in tags or "stuck" in tags:
+            return ValueVector(f=6.0)
+        if "breakthrough" in tags or "insight" in tags:
+            return ValueVector(f=4.0)  # failure preceded success
+        return ValueVector(f=1.5)  # baseline learning even in success
 
 
 class RiskScorer(HeuristicScorer):
-    """R = explicit risk level + inferred from language"""
+    """R: Exposure to downside — explicit + inferred from language"""
     def __call__(self, ctx: ScoringContext) -> ValueVector:
         explicit = ctx.risk_level or 0.0
 
-        # Simple keyword inference if no explicit value
         inferred = 0.0
         if ctx.memory_content:
-            risk_words = {"danger", "bet", "gamble", "all-in", "critical", "existential"}
             content = ctx.memory_content.lower()
-            if any(word in content for word in risk_words):
+            high_risk_phrases = [
+                "all in", "bet everything", "existential", "critical path",
+                "point of no return", "last chance", "do or die"
+            ]
+            medium_risk = ["gamble", "risky", "danger", "bold move", "leap"]
+            if any(phrase in content for phrase in high_risk_phrases):
+                inferred = 0.9
+            elif any(word in content for word in medium_risk):
                 inferred = 0.6
 
         r = 10.0 * max(explicit, inferred)
-        return ValueVector(r=max(0.0, min(10.0, r)))
+        return ValueVector(r=min(10.0, r))
 
 
 class StrategyScorer(HeuristicScorer):
-    """S = depth of planning, abstraction, meta-reasoning"""
+    """S: Depth of planning, abstraction, and meta-cognition"""
     def __call__(self, ctx: ScoringContext) -> ValueVector:
-        if not ctx.memory_content:
-            return ValueVector(s=2.0)
+        content = ctx.memory_content or ""
+        lower = content.lower()
 
-        content = ctx.memory_content.lower()
-        strategy_indicators = {
-            "plan": 3.0,
-            "framework": 4.0,
-            "architecture": 5.0,
-            "if i were": 6.0,
-            "counterfactual": 6.0,
+        base = 3.0
+
+        # Hierarchical strategy indicators
+        indicators = {
+            "architecture": 6.0,
+            "framework": 5.5,
+            "system design": 6.5,
             "long-term": 4.0,
             "leverage": 5.0,
             "second-order": 8.0,
             "meta": 7.0,
+            "counterfactual": 7.5,
+            "if i were": 6.0,
+            "plan b": 4.5,
+            "fallback": 4.0,
+            "trade-off": 5.0,
         }
 
-        score = 2.0  # base
-        for word, boost in strategy_indicators.items():
-            if word in content:
+        score = base
+        for phrase, boost in indicators.items():
+            if phrase in lower:
                 score = max(score, boost)
 
-        # Bonus for length + complexity (proxy for depth)
-        if len(content) > 1000:
+        # Depth proxies
+        if len(content) > 1500:
             score += 2.0
-        if content.count("\n") > 15:
+        if content.count("\n") > 20 or content.count("- ") > 10:
             score += 1.5
+        if content.count("?") > 8:
+            score += 1.0  # deep questioning
 
-        return ValueVector(s=min(15.0, score))
+        return ValueVector(s=min(16.0, score))
 
 
-# ————————————————————————
-# Scoring Engine (combines all)
-# ————————————————————————
+# ==================== Scoring Engine ====================
 
 class HeuristicEngine:
+    """Combines all scorers with optional global caps and normalization"""
     def __init__(self):
-        self.scorers: list[HeuristicScorer] = [
+        self.scorers: List[HeuristicScorer] = [
             TimeScorer(),
             EffortScorer(),
             NoveltyScorer(),
@@ -176,22 +209,29 @@ class HeuristicEngine:
         ]
 
     def score(self, ctx: ScoringContext) -> ValueVector:
-        """Run all scorers and merge results"""
         total = ValueVector()
-        contributions = {}
 
         for scorer in self.scorers:
-            vec = scorer(ctx)
-            for field in vec.dict():
-                if getattr(vec, field) > 0:
-                    current = getattr(total, field)
-                    new_val = current + getattr(vec, field)
-                    setattr(total, field, new_val)
-                    contributions.setdefault(field, 0.0)
-                    contributions[field] += getattr(vec, field)
+            contribution = scorer(ctx)
+            for field in total.__dict__:
+                current = getattr(total, field)
+                added = getattr(contribution, field)
+                setattr(total, field, current + added)
 
-        # Optional: cap total per entry to prevent runaway scoring
-        if total.total() > 60.0:
+        # Optional: soft cap per entry to prevent explosion on epic sessions
+        total_value = total.total()
+        if total_value > 70.0:
+            scale = 70.0 / total_value
+            total = ValueVector(**{k: v * scale for k, v in total.dict().items()})
+
+        # Apply human overrides last (e.g., "I feel this was more novel +2")
+        if ctx.user_override:
+            for k, delta in ctx.user_override.items():
+                if k in total.__dict__:
+                    current = getattr(total, k)
+                    setattr(total, k, max(0.0, current + delta))
+
+        return total
             scale = 60.0 / total.total()
             total = ValueVector(**{k: v * scale for k, v in total.dict().items()})
 
