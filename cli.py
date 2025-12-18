@@ -10,7 +10,50 @@ def full_demo_with_heuristics():
     from value_ledger.heuristics import ScoringContext
 
     ledger = ValueLedger("smart_ledger.jsonl")
+def live_intent_simulation():
+    """Simulates a stream of IntentLog events"""
+    from value_ledger.core import ValueLedger
+    from value_ledger.integration import IntentLogConnector, IntentEvent
+    import time
 
+    ledger = ValueLedger("integrated_ledger.jsonl")
+    connector = IntentLogConnector(ledger)
+
+    print("=== Simulating IntentLog event stream ===\n")
+
+    # Event 1: Start intent
+    connector.handle_event(IntentEvent(
+        event_type="intent_started",
+        intent_id="sim-001",
+        timestamp=time.time(),
+        human_reasoning="Design a better way to track cognitive effort in AI agents. "
+                        "Current systems undervalue failures and deep thinking.",
+        interruptions=0,
+    ))
+    time.sleep(1)
+
+    # Event 2: Complete with rich outcome
+    connector.handle_event(IntentEvent(
+        event_type="intent_completed",
+        intent_id="sim-001",
+        timestamp=time.time(),
+        human_reasoning="Design a better way to track cognitive effort...",
+        agent_output="""
+        After exploring several dead ends with token-based valuation,
+        I realized that proof-of-effort via heuristic vectors (T/E/N/F/R/S)
+        preserves value even in failure. This breakthrough changes the architecture.
+        """,
+        memory_hash="sha256:deadbeef123...",
+        interruptions=12,
+        keystrokes=3800,
+        outcome_tags=["breakthrough", "partial_failure"],
+        risk_level=0.75,
+        metadata={"session_focus": "architecture_design"},
+    ))
+
+    print("\n=== Ledger state after one full intent ===")
+    for entry in ledger.entries:
+        print(f"{entry.timestamp:.0f} | {entry.status:6} | Total: {entry.value_vector.total():.1f} | {entry.metadata.get('event_type')}")
     ctx = ScoringContext(
         intent_id="intent-042",
         start_time=time.time() - 7200,  # 2 hours ago
