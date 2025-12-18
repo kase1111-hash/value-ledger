@@ -5,6 +5,38 @@ Simple CLI to test the ledger
 import json
 from value_ledger.core import ValueLedger, ValueVector
 
+def full_demo_with_heuristics():
+    from value_ledger.core import ValueLedger
+    from value_ledger.heuristics import ScoringContext
+
+    ledger = ValueLedger("smart_ledger.jsonl")
+
+    ctx = ScoringContext(
+        intent_id="intent-042",
+        start_time=time.time() - 7200,  # 2 hours ago
+        end_time=time.time(),
+        interruptions=7,
+        keystrokes=2400,
+        memory_content="""
+        I spent all morning chasing a dead-end with the retrieval system.
+        Realized halfway through that the embedding space was collapsing.
+        High risk — this could have broken the whole agent loop.
+        But now I see a much better architecture using dynamic context windows.
+        """,
+        previous_memories=[
+            ("hash1", time.time() - 86400, "tried retrieval before, didn't work"),
+        ],
+        outcome_tags=["dead_end", "breakthrough"],
+        risk_level=0.8,
+    )
+
+    print("Accruing with full heuristic engine...")
+    entry_id = ledger.accrue_with_heuristics(ctx)
+    print(f"Entry ID: {entry_id[:8]}...")
+
+    current = ledger.current_value_for_intent("intent-042")
+    print("Auto-scored vector:")
+    print(current.dict())
 def demo():
     ledger = ValueLedger("demo_ledger.jsonl")
 
