@@ -62,10 +62,36 @@ class IntentLogConnector:
         self.active_intents[event.intent_id] = event.timestamp
         print(f"[ValueLedger] Intent started: {event.intent_id}")
 
-    def _on_intent_completed(self, event: IntentEvent):
-        """Main accrual logic — triggered on completion or abandonment"""
-        start_time = self.active_intents.pop(event.intent_id, event.timestamp)
-        end_time = event.timestamp
+       def _on_intent_completed(self, event: IntentEvent):
+        # ... existing setup ...
+
+        # === NEW: Memory Vault integration ===
+        from .memory_vault_hook import MemoryVaultHook
+
+        mv_hook = MemoryVaultHook()
+        novelty_context = mv_hook.get_novelty_context(
+            current_content=content_for_analysis,
+            intent_id=event.intent_id,
+            memory_hash=event.memory_hash,
+        )
+
+        ctx = ScoringContext(
+            # ... existing fields ...
+            memory_content=content_for_analysis or None,
+            previous_memories=novelty_context,  # ← Now real data!
+            # ...
+        )
+
+        # Optional: store raw content temporarily for later reassessment
+        metadata = {
+            # ... existing ...
+            "raw_content_for_novelty": content_for_analysis if mv_hook.can_access_content(event.intent_id) else None,
+        }
+
+        entry_id = self.ledger.accrue_with_heuristics(ctx=ctx, metadata=metadata)
+
+        # Optional: register for future reassessment on new memories
+        # mv_hook.register_for_reassessment(event.intent_id)  # future
 
         # Build rich scoring context from event
         content_for_analysis = ""
