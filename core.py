@@ -100,6 +100,34 @@ class ValueLedger:
             json.dump(entry.dict(), f)
             f.write("\n")
 
+    def accrue_with_heuristics(
+        self,
+        ctx: ScoringContext,
+        metadata: Optional[Dict] = None,
+    ) -> str:
+        """High-level API used by IntentLog / Agent-OS at intent completion"""
+        from .heuristics import HeuristicEngine  # local import to avoid circular
+
+        engine = HeuristicEngine()
+        auto_vector = engine.score(ctx)
+
+        # Allow human override to boost/nerf specific axes
+        if ctx.user_override:
+            for k, v in ctx.user_override.items():
+                current = getattr(auto_vector, k)
+                setattr(auto_vector, k, max(0.0, current + v))
+
+        return self.accrue(
+            intent_id=ctx.intent_id,
+            initial_vector=auto_vector.dict(),
+            memory_hash=ctx.memory_hash,
+            metadata={
+                "scoring_engine": "HeuristicEngine v1",
+                "raw_duration_s": (ctx.end_time or time.time()) - ctx.start_time,
+                "interruptions": ctx.interruptions,
+                **(metadata or {}),
+            },
+        )
     def accrue(
         self,
         intent_id: str,
