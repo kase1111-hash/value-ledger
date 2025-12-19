@@ -119,13 +119,14 @@ class MerkleTree:
 
 
 class ValueVector(BaseModel):
-    """The six value units: T/E/N/F/R/S"""
+    """The seven value units: T/E/N/F/R/S/U"""
     t: float = Field(default=0.0, ge=0.0, description="Time spent")
     e: float = Field(default=0.0, ge=0.0, description="Effort (interruption-adjusted)")
     n: float = Field(default=0.0, ge=0.0, description="Novelty")
     f: float = Field(default=0.0, ge=0.0, description="Value from failure/learning")
     r: float = Field(default=0.0, ge=0.0, description="Risk exposure")
     s: float = Field(default=0.0, ge=0.0, description="Strategic insight")
+    u: float = Field(default=0.0, ge=0.0, description="Reusability (cross-domain applicability)")
 
     def total(self) -> float:
         return sum(self.dict().values())
@@ -715,7 +716,7 @@ class ValueLedger:
 
     def _aggregate_sum(self, entries: List[LedgerEntry]) -> ValueVector:
         """Sum all value vectors."""
-        result = {"t": 0.0, "e": 0.0, "n": 0.0, "f": 0.0, "r": 0.0, "s": 0.0}
+        result = {"t": 0.0, "e": 0.0, "n": 0.0, "f": 0.0, "r": 0.0, "s": 0.0, "u": 0.0}
         for entry in entries:
             vec = entry.value_vector.dict()
             for k in result:
@@ -724,7 +725,7 @@ class ValueLedger:
 
     def _aggregate_max(self, entries: List[LedgerEntry]) -> ValueVector:
         """Take maximum value for each dimension."""
-        result = {"t": 0.0, "e": 0.0, "n": 0.0, "f": 0.0, "r": 0.0, "s": 0.0}
+        result = {"t": 0.0, "e": 0.0, "n": 0.0, "f": 0.0, "r": 0.0, "s": 0.0, "u": 0.0}
         for entry in entries:
             vec = entry.value_vector.dict()
             for k in result:
@@ -737,7 +738,7 @@ class ValueLedger:
         weights: Dict[str, float],
     ) -> ValueVector:
         """Weighted sum of value vectors."""
-        result = {"t": 0.0, "e": 0.0, "n": 0.0, "f": 0.0, "r": 0.0, "s": 0.0}
+        result = {"t": 0.0, "e": 0.0, "n": 0.0, "f": 0.0, "r": 0.0, "s": 0.0, "u": 0.0}
         total_weight = sum(weights.get(e.id, 1.0) for e in entries)
 
         for entry in entries:

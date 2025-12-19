@@ -226,6 +226,103 @@ class StrategyScorer(HeuristicScorer):
         return ValueVector(s=min(16.0, score))
 
 
+class ReusabilityScorer(HeuristicScorer):
+    """
+    Score reusability potential of ideas and patterns.
+
+    Reusability is high when:
+    - Content describes abstract patterns/principles
+    - Ideas are domain-agnostic or cross-domain
+    - Content defines reusable components/templates
+    - Language indicates generalizability
+    """
+
+    # Indicators of high reusability
+    ABSTRACT_INDICATORS = {
+        "pattern": 2.0,
+        "principle": 2.5,
+        "template": 2.0,
+        "abstraction": 3.0,
+        "generalize": 2.5,
+        "reusable": 3.0,
+        "modular": 2.0,
+        "composable": 2.5,
+        "interface": 1.5,
+        "protocol": 2.0,
+    }
+
+    # Domain-crossing indicators
+    CROSS_DOMAIN_INDICATORS = {
+        "applies to": 2.0,
+        "works for": 1.5,
+        "universal": 3.0,
+        "any context": 2.5,
+        "domain-agnostic": 3.0,
+        "transferable": 2.5,
+        "portable": 1.5,
+    }
+
+    # Low reusability indicators (specific/one-off)
+    SPECIFIC_INDICATORS = {
+        "this specific": -2.0,
+        "one-time": -2.5,
+        "hack": -1.5,
+        "workaround": -1.0,
+        "only for": -1.5,
+        "special case": -1.0,
+    }
+
+    def __call__(self, ctx: ScoringContext) -> ValueVector:
+        content = ctx.memory_content or ""
+        lower = content.lower()
+
+        if not content:
+            return ValueVector(u=0.0)
+
+        # Base score
+        base = 2.0
+
+        # Check abstract pattern indicators
+        abstract_score = 0.0
+        for phrase, boost in self.ABSTRACT_INDICATORS.items():
+            if phrase in lower:
+                abstract_score += boost
+
+        # Check cross-domain indicators
+        cross_domain_score = 0.0
+        for phrase, boost in self.CROSS_DOMAIN_INDICATORS.items():
+            if phrase in lower:
+                cross_domain_score += boost
+
+        # Check specific/one-off indicators (reduce score)
+        specific_penalty = 0.0
+        for phrase, penalty in self.SPECIFIC_INDICATORS.items():
+            if phrase in lower:
+                specific_penalty += penalty
+
+        # Structure indicators (well-structured = more reusable)
+        structure_bonus = 0.0
+        if content.count("```") >= 2:  # Code blocks
+            structure_bonus += 1.5
+        if content.count("def ") >= 2 or content.count("class ") >= 1:
+            structure_bonus += 2.0
+        if content.count("##") >= 2:  # Markdown headers
+            structure_bonus += 1.0
+        if "example" in lower or "usage:" in lower:
+            structure_bonus += 1.5
+
+        # Compute final score
+        score = base + abstract_score + cross_domain_score + specific_penalty + structure_bonus
+
+        # Length bonus for comprehensive patterns
+        if len(content) > 500 and abstract_score > 0:
+            score += 1.0
+        if len(content) > 1500 and abstract_score > 2:
+            score += 1.5
+
+        return ValueVector(u=max(0.0, min(12.0, score)))
+
+
 # ==================== Engine ====================
 
 class HeuristicEngine:
@@ -237,6 +334,7 @@ class HeuristicEngine:
             FailureScorer(),
             RiskScorer(),
             StrategyScorer(),
+            ReusabilityScorer(),  # ← Phase 4: Track pattern reusability
         ]
 
     def score(self, ctx: ScoringContext) -> ValueVector:

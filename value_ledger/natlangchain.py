@@ -378,6 +378,7 @@ Value Assessment:
 - Learning from failure: {vec.f:.1f} units
 - Risk exposure: {vec.r:.1f} units
 - Strategic insight: {vec.s:.1f} units
+- Reusability potential: {vec.u:.1f} units
 - Total value: {vec.total():.1f} units
 
 This entry is currently {status_text}."""
@@ -505,6 +506,7 @@ The recorded effort shows:
 - Learning value of {vec.get('f', 0):.1f} units
 - Risk factor of {vec.get('r', 0):.1f} units
 - Strategic component of {vec.get('s', 0):.1f} units
+- Reusability potential of {vec.get('u', 0):.1f} units
 
 Aggregate assessed value: {total:.1f} units
 

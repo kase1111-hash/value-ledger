@@ -23,7 +23,7 @@ def format_timestamp(ts: float) -> str:
 
 def format_value_vector(v: ValueVector) -> str:
     """Format value vector for display."""
-    return f"T={v.t:.1f} E={v.e:.1f} N={v.n:.1f} F={v.f:.1f} R={v.r:.1f} S={v.s:.1f}"
+    return f"T={v.t:.1f} E={v.e:.1f} N={v.n:.1f} F={v.f:.1f} R={v.r:.1f} S={v.s:.1f} U={v.u:.1f}"
 
 
 class LedgerCLI:
@@ -173,6 +173,7 @@ class LedgerCLI:
         sum_f = sum(e.value_vector.f for e in entries)
         sum_r = sum(e.value_vector.r for e in entries)
         sum_s = sum(e.value_vector.s for e in entries)
+        sum_u = sum(e.value_vector.u for e in entries)
 
         # Time range
         oldest = min(entries, key=lambda e: e.timestamp)
@@ -204,12 +205,13 @@ class LedgerCLI:
         print(f"   Average per Entry: {avg_value:.1f}")
 
         print(f"\n📊 VALUE BY DIMENSION")
-        print(f"   Time (T):     {sum_t:>8.1f}")
-        print(f"   Effort (E):   {sum_e:>8.1f}")
-        print(f"   Novelty (N):  {sum_n:>8.1f}")
-        print(f"   Failure (F):  {sum_f:>8.1f}")
-        print(f"   Risk (R):     {sum_r:>8.1f}")
-        print(f"   Strategy (S): {sum_s:>8.1f}")
+        print(f"   Time (T):         {sum_t:>8.1f}")
+        print(f"   Effort (E):       {sum_e:>8.1f}")
+        print(f"   Novelty (N):      {sum_n:>8.1f}")
+        print(f"   Failure (F):      {sum_f:>8.1f}")
+        print(f"   Risk (R):         {sum_r:>8.1f}")
+        print(f"   Strategy (S):     {sum_s:>8.1f}")
+        print(f"   Reusability (U):  {sum_u:>8.1f}")
 
         print(f"\n⏰ TIME RANGE")
         print(f"   Oldest: {format_timestamp(oldest.timestamp)}")
@@ -252,14 +254,15 @@ class LedgerCLI:
 
         print(f"\n💰 VALUE VECTOR")
         v = entry.value_vector
-        print(f"   Time (T):     {v.t:>6.2f}")
-        print(f"   Effort (E):   {v.e:>6.2f}")
-        print(f"   Novelty (N):  {v.n:>6.2f}")
-        print(f"   Failure (F):  {v.f:>6.2f}")
-        print(f"   Risk (R):     {v.r:>6.2f}")
-        print(f"   Strategy (S): {v.s:>6.2f}")
-        print(f"   ─────────────────")
-        print(f"   TOTAL:        {v.total():>6.2f}")
+        print(f"   Time (T):         {v.t:>6.2f}")
+        print(f"   Effort (E):       {v.e:>6.2f}")
+        print(f"   Novelty (N):      {v.n:>6.2f}")
+        print(f"   Failure (F):      {v.f:>6.2f}")
+        print(f"   Risk (R):         {v.r:>6.2f}")
+        print(f"   Strategy (S):     {v.s:>6.2f}")
+        print(f"   Reusability (U):  {v.u:>6.2f}")
+        print(f"   ─────────────────────")
+        print(f"   TOTAL:            {v.total():>6.2f}")
 
         print(f"\n🔐 PROOF DATA")
         print(f"   Content Hash:    {entry.proof.content_hash or 'None'}")
