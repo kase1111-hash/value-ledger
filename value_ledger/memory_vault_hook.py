@@ -23,6 +23,10 @@ class MemoryEntryStub:
     metadata: Dict[str, Any] = None
 
 class MemoryVaultStub:
+    def __init__(self, vault_path: str = "memory_vault/"):
+        """Stub accepts vault_path for API compatibility with real MemoryVault."""
+        self.vault_path = vault_path
+
     def query_similar(
         self,
         query_content: str,
