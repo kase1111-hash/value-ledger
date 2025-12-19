@@ -282,11 +282,53 @@ The Value Ledger exists for when those diverge.
 
 ---
 
-## 16. Unimplemented Features & Implementation Plans
+## 16. NatLangChain Compatibility
+
+**Source:** [NatLangChain Repository](https://github.com/kase1111-hash/NatLangChain)
+
+**Status:** ⏸️ Designed but not implemented
+
+### 16.1 Overview
+
+NatLangChain is a prose-first distributed ledger where natural language entries form the immutable substrate. Value Ledger entries can be exported and anchored to NatLangChain for third-party verification.
+
+### 16.2 Key Compatibility Points
+
+| NatLangChain Concept | Value Ledger Mapping |
+|---------------------|---------------------|
+| Prose entries | Effort summaries from EffortReceipt |
+| SHA-256 chaining | content_hash in proof field |
+| Proof of Understanding | Validator summaries in MP-02 receipts |
+| Append-only ledger | JSONL storage format |
+| Deterministic validation | HeuristicEngine with reproducible scoring |
+
+### 16.3 REST API Integration
+
+NatLangChain exposes endpoints that Value Ledger can use for anchoring:
+
+```python
+# Target endpoints for integration:
+POST /entry          # Submit effort receipt as prose entry
+POST /entry/validate # Validate receipt before anchoring
+GET  /chain          # Query anchored receipts
+GET  /chain/narrative # Human-readable view of effort history
+```
+
+### 16.4 Proof of Understanding Alignment
+
+NatLangChain uses "Proof of Understanding" where validators paraphrase entries to demonstrate comprehension. MP-02 validators similarly produce deterministic summaries. This alignment enables:
+
+- Validator summaries can double as NatLangChain entry prose
+- Multiple validators provide redundancy (semantic consensus)
+- Ambiguity handling through NatLangChain clarification protocols
+
+---
+
+## 17. Unimplemented Features & Implementation Plans
 
 This section documents features specified in the documentation but not yet implemented, along with detailed implementation plans.
 
-### 16.1 Proof System (MP-02 Compatibility)
+### 17.1 Proof System (MP-02 Compatibility)
 
 **Source:** specs.md §12, MP-02-spec.md
 
@@ -324,13 +366,20 @@ This section documents features specified in the documentation but not yet imple
 
 ---
 
-### 16.2 Effort Receipt Protocol (MP-02)
+### 17.2 Effort Receipt Protocol (MP-02)
 
-**Source:** MP-02-spec.md
+**Source:** MP-02-spec.md, [NatLangChain Repository](https://github.com/kase1111-hash/NatLangChain)
 
 **Status:** Not implemented
 
-**Description:** Full implementation of the Proof-of-Effort Receipt Protocol for NatLangChain compatibility.
+**Description:** Full implementation of the Proof-of-Effort Receipt Protocol for NatLangChain compatibility. MP-02 asserts that effort occurred with traceable provenance, without asserting value, ownership, or compensation.
+
+**Key MP-02 Principles:**
+- Process Over Artifact — Effort is validated as a process unfolding over time
+- Continuity Matters — Temporal progression is a primary signal of genuine work
+- Receipts, Not Claims — The protocol records evidence, not conclusions about value
+- Model Skepticism — LLM assessments are advisory and must be reproducible
+- Partial Observability — Uncertainty is preserved, not collapsed
 
 **Implementation Plan:**
 
@@ -340,7 +389,7 @@ This section documents features specified in the documentation but not yet imple
    class EffortSignal:
        signal_type: str  # "voice", "text", "command", "tool"
        timestamp: float
-       hash: str
+       hash: str  # SHA-256 hash of signal content
        modality: str
 
    @dataclass
@@ -349,36 +398,77 @@ This section documents features specified in the documentation but not yet imple
        start_time: float
        end_time: float
        signals: List[EffortSignal]
-       segmentation_rule: str
+       segmentation_rule: str  # Must be deterministic and disclosed
+
+   @dataclass
+   class ValidationMetadata:
+       validator_id: str
+       model_id: str
+       model_version: str
+       validation_timestamp: float
+       coherence_score: Optional[float]
+       progression_score: Optional[float]
+       uncertainty_markers: List[str]  # Preserve ambiguity per MP-02
 
    @dataclass
    class EffortReceipt:
        receipt_id: str
        time_bounds: Tuple[float, float]
        signal_hashes: List[str]
-       effort_summary: str
+       effort_summary: str  # Deterministic, suitable for NatLangChain prose
        validation_metadata: ValidationMetadata
        observer_id: str
        validator_id: str
        prior_receipts: List[str]
+
+       # Failure mode tracking (MP-02 §11)
+       observation_gaps: List[Tuple[float, float]]
+       conflicting_validations: List[str]
+       suspected_manipulation: bool
+       is_incomplete: bool
    ```
 
 2. **Create Observer Interface** (`value_ledger/observer.py`)
    ```python
    class Observer(Protocol):
+       """
+       Observers MUST:
+       - Time-stamp all signals
+       - Preserve ordering
+       - Disclose capture modality
+
+       Observers MUST NOT:
+       - Alter raw signals
+       - Infer intent beyond observed data
+       """
        def capture_signal(signal: Any) -> EffortSignal
        def get_modality() -> str
        def get_observer_id() -> str
+       def get_capture_mode() -> str  # "continuous" or "intermittent"
    ```
 
 3. **Create Validator Interface** (`value_ledger/validator.py`)
    ```python
    class Validator:
+       """
+       Validators MUST:
+       - Produce deterministic summaries
+       - Disclose model identity and version
+       - Preserve dissent and uncertainty
+
+       Validators MUST NOT:
+       - Declare effort as valuable
+       - Assert originality or ownership
+       - Collapse ambiguous signals into certainty
+       """
        model_id: str
        model_version: str
 
        def validate_segment(segment: EffortSegment) -> ValidationResult
        def generate_summary(segment: EffortSegment) -> str
+       def assess_coherence(segment: EffortSegment) -> float
+       def assess_progression(segment: EffortSegment) -> float
+       def detect_adversarial_patterns(segment: EffortSegment) -> List[str]
    ```
 
 4. **Create Receipt Builder**
@@ -387,11 +477,30 @@ This section documents features specified in the documentation but not yet imple
        def from_ledger_entry(entry: LedgerEntry) -> EffortReceipt
        def anchor_to_ledger(receipt: EffortReceipt) -> str
        def verify_receipt(receipt: EffortReceipt) -> VerificationResult
+       def compute_receipt_hash(receipt: EffortReceipt) -> str  # For NLC anchoring
+
+   def verify_third_party(receipt: EffortReceipt) -> bool:
+       """
+       Third party verification per MP-02 §10:
+       - Recompute receipt hashes
+       - Inspect validation metadata
+       - Confirm ledger inclusion
+       Trust in Observer or Validator is NOT required.
+       """
+   ```
+
+5. **NatLangChain Anchoring Integration**
+   ```python
+   def anchor_receipt_to_nlc(receipt: EffortReceipt, nlc_client: NLCClient) -> str:
+       """
+       Convert EffortReceipt to NatLangChain prose entry and anchor.
+       Uses effort_summary as the canonical prose for Proof of Understanding.
+       """
    ```
 
 ---
 
-### 16.3 Owner & Classification System
+### 17.3 Owner & Classification System
 
 **Source:** specs.md §5
 
@@ -425,7 +534,7 @@ This section documents features specified in the documentation but not yet imple
 
 ---
 
-### 16.4 Multi-Parent Aggregation
+### 17.4 Multi-Parent Aggregation
 
 **Source:** specs.md §5, §6.2
 
@@ -462,7 +571,7 @@ This section documents features specified in the documentation but not yet imple
 
 ---
 
-### 16.5 Failure Mode Handling
+### 17.5 Failure Mode Handling
 
 **Source:** specs.md §13
 
@@ -507,7 +616,7 @@ This section documents features specified in the documentation but not yet imple
 
 ---
 
-### 16.6 Synth-Mind Integration
+### 17.6 Synth-Mind Integration
 
 **Source:** INTEGRATION.md §7
 
@@ -546,44 +655,92 @@ This section documents features specified in the documentation but not yet imple
 
 ---
 
-### 16.7 NatLangChain Export
+### 17.7 NatLangChain Export
 
-**Source:** INTEGRATION.md §8
+**Source:** INTEGRATION.md §8, [NatLangChain Repository](https://github.com/kase1111-hash/NatLangChain)
 
 **Status:** Not implemented
 
-**Description:** Export ledger entries to NatLangChain format for blockchain anchoring.
+**Description:** Export ledger entries to NatLangChain format for blockchain anchoring. NatLangChain is a prose-first distributed ledger where natural language entries form the immutable substrate.
 
 **Implementation Plan:**
 
 1. **Create NatLangChain Adapter** (`value_ledger/natlangchain.py`)
    ```python
    class NatLangChainExporter:
+       base_url: str = "http://localhost:5000"  # NatLangChain node
+
        def to_nlc_format(entry: LedgerEntry) -> NLCRecord
        def batch_export(entries: List[LedgerEntry]) -> List[NLCRecord]
        def anchor_to_chain(records: List[NLCRecord]) -> AnchorResult
+       def validate_before_anchor(record: NLCRecord) -> ValidationResult
    ```
 
-2. **Implement Format Conversion**
+2. **Implement Format Conversion (Prose-First)**
    ```python
    @dataclass
    class NLCRecord:
        record_type: str = "effort_receipt"
        timestamp: float
-       proof_hash: str
+       proof_hash: str  # SHA-256 compatible with NLC block chaining
        value_summary: Dict
        prior_anchors: List[str]
+
+       # NatLangChain-specific fields
+       prose_entry: str  # Human-readable narrative (required by NLC)
+       author: str  # Owner/creator identifier
+       intent_summary: str  # From validator deterministic summary
+
+   def to_prose_entry(entry: LedgerEntry) -> str:
+       """Convert ledger entry to human-readable prose for NatLangChain."""
+       return f"""
+       Effort Receipt #{entry.id[:8]}
+       Time: {entry.timestamp}
+       Intent: {entry.intent_id}
+       Value Vector: T={entry.value_vector.t:.1f}, E={entry.value_vector.e:.1f},
+                     N={entry.value_vector.n:.1f}, F={entry.value_vector.f:.1f},
+                     R={entry.value_vector.r:.1f}, S={entry.value_vector.s:.1f}
+       Status: {entry.status}
+       """
    ```
 
-3. **Add Verification Hooks**
+3. **REST API Integration**
+   ```python
+   class NLCClient:
+       def submit_entry(record: NLCRecord) -> str:
+           """POST /entry - Returns entry hash"""
+
+       def validate_entry(record: NLCRecord) -> ValidationResult:
+           """POST /entry/validate - Dry-run validation"""
+
+       def get_chain_narrative() -> str:
+           """GET /chain/narrative - Human-readable ledger view"""
+
+       def search_by_intent(intent: str) -> List[NLCRecord]:
+           """GET /entries/search?intent=... - Semantic search"""
+   ```
+
+4. **Proof of Understanding Compatibility**
+   ```python
+   def generate_validator_summary(entry: LedgerEntry) -> str:
+       """
+       Generate deterministic summary suitable for NatLangChain's
+       Proof of Understanding consensus mechanism.
+       """
+       # Summary must be reproducible by other validators
+       # Used for semantic consensus across NLC nodes
+   ```
+
+5. **Add Verification Hooks**
    ```python
    def verify_anchor(entry_id: str, chain_ref: str) -> bool
    def get_chain_proof(entry_id: str) -> ChainProof
+   def check_inclusion(entry_id: str) -> InclusionProof
    ```
 
 ---
 
-### 16.8 Admin CLI Commands
+### 17.8 Admin CLI Commands
 
 **Source:** INTEGRATION.md §5
 
@@ -629,7 +786,7 @@ This section documents features specified in the documentation but not yet imple
 
 ---
 
-### 16.9 Explicit Revocation Method
+### 17.9 Explicit Revocation Method
 
 **Source:** specs.md §6.4
 
@@ -668,7 +825,7 @@ This section documents features specified in the documentation but not yet imple
 
 ---
 
-### 16.10 Reusability Metric
+### 17.10 Reusability Metric
 
 **Source:** specs.md §4.1
 
@@ -706,26 +863,49 @@ This section documents features specified in the documentation but not yet imple
 
 ---
 
-## 17. Implementation Priority
+## 18. Implementation Priority
 
 | Feature | Priority | Complexity | Dependencies |
 |---------|----------|------------|--------------|
-| Proof System (16.1) | High | Medium | None |
-| Admin CLI (16.8) | High | Low | None |
-| Explicit Revocation (16.9) | High | Low | None |
-| Owner/Classification (16.3) | Medium | Medium | Learning Contracts |
-| Failure Mode Handling (16.5) | Medium | Medium | None |
-| Multi-Parent Aggregation (16.4) | Medium | Medium | None |
-| Effort Receipt Protocol (16.2) | Medium | High | Proof System |
-| NatLangChain Export (16.7) | Low | Medium | NatLangChain module |
-| Synth-Mind Integration (16.6) | Low | Medium | Synth-Mind module |
-| Reusability Metric (16.10) | Low | Low | Migration needed |
+| Proof System (17.1) | High | Medium | None |
+| Admin CLI (17.8) | High | Low | None |
+| Explicit Revocation (17.9) | High | Low | None |
+| Owner/Classification (17.3) | Medium | Medium | Learning Contracts |
+| Failure Mode Handling (17.5) | Medium | Medium | None |
+| Multi-Parent Aggregation (17.4) | Medium | Medium | None |
+| Effort Receipt Protocol (17.2) | Medium | High | Proof System (17.1) |
+| NatLangChain Compatibility (§16) | Medium | Medium | Proof System (17.1), MP-02 (17.2) |
+| NatLangChain Export (17.7) | Low | Medium | NatLangChain module, NLC Compatibility (§16) |
+| Synth-Mind Integration (17.6) | Low | Medium | Synth-Mind module |
+| Reusability Metric (17.10) | Low | Low | Migration needed |
+
+### Implementation Phases
+
+**Phase 1: Foundation (High Priority)**
+1. Proof System (17.1) — Required for all verification features
+2. Admin CLI (17.8) — Enables debugging and management
+3. Explicit Revocation (17.9) — Completes status lifecycle
+
+**Phase 2: Core Features (Medium Priority)**
+4. Owner/Classification (17.3) — Requires Learning Contracts dependency
+5. Multi-Parent Aggregation (17.4) — Enhances value composition
+6. Failure Mode Handling (17.5) — Production safety
+
+**Phase 3: Protocol Integration (Medium Priority)**
+7. Effort Receipt Protocol (17.2) — Full MP-02 implementation
+8. NatLangChain Compatibility (§16) — Anchoring preparation
+
+**Phase 4: External Integration (Low Priority)**
+9. NatLangChain Export (17.7) — Production anchoring
+10. Synth-Mind Integration (17.6) — Cognitive tier tracking
+11. Reusability Metric (17.10) — Schema extension
 
 ---
 
-## 18. Version History
+## 19. Version History
 
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1.0 | 2024 | Initial specification |
 | 0.1.1 | 2024 | Added implementation status and plans |
+| 0.2.0 | 2025-12-19 | Added NatLangChain compatibility section, updated section numbering, verified implementation status against codebase |
