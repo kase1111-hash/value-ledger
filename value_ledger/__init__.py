@@ -2,7 +2,8 @@
 Value Ledger - Evidentiary accounting layer for cognitive effort in Agent-OS
 
 This module provides the core functionality for tracking and proving the value
-of cognitive work, including ideas, effort, time, novelty, failures, and strategic insights.
+of cognitive work, including ideas, effort, time, novelty, failures, strategic insights,
+and reusability.
 """
 
 from .core import (
@@ -15,7 +16,11 @@ from .core import (
     SourceValidator,
     FailureModeHandler,
 )
-from .heuristics import HeuristicEngine, ScoringContext
+from .heuristics import (
+    HeuristicEngine,
+    ScoringContext,
+    ReusabilityScorer,
+)
 from .integration import IntentLogConnector, IntentEvent, create_intentlog_listener
 from .memory_vault_hook import MemoryVaultHook
 from .receipt import (
@@ -36,8 +41,15 @@ from .natlangchain import (
     ProofOfUnderstandingValidator,
     anchor_receipt_to_nlc,
 )
+from .synth_mind import (
+    CognitiveTier,
+    TierChangeEvent,
+    CognitiveTierContext,
+    CognitiveTierScorer,
+    SynthMindHook,
+)
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     # Core classes
@@ -53,6 +65,7 @@ __all__ = [
     # Heuristics
     "HeuristicEngine",
     "ScoringContext",
+    "ReusabilityScorer",
     # Integration
     "IntentLogConnector",
     "IntentEvent",
@@ -75,4 +88,10 @@ __all__ = [
     "NatLangChainExporter",
     "ProofOfUnderstandingValidator",
     "anchor_receipt_to_nlc",
+    # Synth-Mind integration
+    "CognitiveTier",
+    "TierChangeEvent",
+    "CognitiveTierContext",
+    "CognitiveTierScorer",
+    "SynthMindHook",
 ]
