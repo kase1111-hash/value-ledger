@@ -21,9 +21,23 @@ interruptions requires additional cognitive effort. The formula is:
 from __future__ import annotations
 
 import time
+import logging
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any, Callable, Protocol
 from enum import Enum
+
+# Configure module logger
+logger = logging.getLogger("value_ledger.interruption")
+
+# Set up a default handler if none exists (for standalone use)
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter(
+        "[%(asctime)s] %(levelname)s [%(name)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    ))
+    logger.addHandler(_handler)
+    logger.setLevel(logging.DEBUG)
 
 
 class InterruptionType(Enum):
@@ -121,6 +135,7 @@ class InterruptionTracker:
         """Initialize the interruption tracker."""
         self.active_sessions: Dict[str, Dict[str, Any]] = {}
         self.completed_summaries: List[InterruptionSummary] = []
+        logger.info("InterruptionTracker initialized")
 
     def start_session(self, intent_id: str) -> None:
         """
@@ -129,10 +144,15 @@ class InterruptionTracker:
         Args:
             intent_id: Unique identifier for the intent session
         """
+        start_time = time.time()
         self.active_sessions[intent_id] = {
-            "start_time": time.time(),
+            "start_time": start_time,
             "events": [],
         }
+        logger.info(
+            f"Session started: intent_id={intent_id}, start_time={start_time:.3f}, "
+            f"active_sessions_count={len(self.active_sessions)}"
+        )
 
     def record_interruption(self, event: InterruptionEvent) -> None:
         """
@@ -145,12 +165,25 @@ class InterruptionTracker:
             ValueError: If the intent session is not active
         """
         intent_id = event.intent_id
+        logger.debug(
+            f"Recording interruption: intent_id={intent_id}, "
+            f"type={event.interruption_type.value}, source={event.source}, "
+            f"timestamp={event.timestamp:.3f}, duration={event.duration}"
+        )
 
         # Auto-start session if not exists (graceful handling)
         if intent_id not in self.active_sessions:
+            logger.warning(
+                f"Session not found for intent_id={intent_id}, auto-starting session"
+            )
             self.start_session(intent_id)
 
         self.active_sessions[intent_id]["events"].append(event)
+        event_count = len(self.active_sessions[intent_id]["events"])
+        logger.debug(
+            f"Interruption recorded: intent_id={intent_id}, "
+            f"total_events={event_count}"
+        )
 
     def get_interruption_count(self, intent_id: str) -> int:
         """
@@ -163,13 +196,16 @@ class InterruptionTracker:
             Total number of interruptions (excluding FOCUS_REGAINED)
         """
         if intent_id not in self.active_sessions:
+            logger.debug(f"get_interruption_count: intent_id={intent_id} not found, returning 0")
             return 0
 
         events = self.active_sessions[intent_id]["events"]
-        return sum(
+        count = sum(
             1 for e in events
             if e.interruption_type != InterruptionType.FOCUS_REGAINED
         )
+        logger.debug(f"get_interruption_count: intent_id={intent_id}, count={count}")
+        return count
 
     def get_weighted_interruptions(self, intent_id: str) -> float:
         """
@@ -189,13 +225,16 @@ class InterruptionTracker:
             Weighted sum of interruptions
         """
         if intent_id not in self.active_sessions:
+            logger.debug(f"get_weighted_interruptions: intent_id={intent_id} not found, returning 0.0")
             return 0.0
 
         events = self.active_sessions[intent_id]["events"]
-        return sum(
+        weighted = sum(
             self.TYPE_WEIGHTS.get(e.interruption_type, 1.0)
             for e in events
         )
+        logger.debug(f"get_weighted_interruptions: intent_id={intent_id}, weighted={weighted:.3f}")
+        return weighted
 
     def end_session(self, intent_id: str) -> InterruptionSummary:
         """
@@ -210,7 +249,12 @@ class InterruptionTracker:
         Raises:
             KeyError: If the intent session is not active
         """
+        logger.info(f"Ending session: intent_id={intent_id}")
+
         if intent_id not in self.active_sessions:
+            logger.warning(
+                f"end_session: intent_id={intent_id} not found, returning empty summary"
+            )
             # Return empty summary for unknown sessions
             return InterruptionSummary(
                 intent_id=intent_id,
@@ -226,6 +270,13 @@ class InterruptionTracker:
         session = self.active_sessions.pop(intent_id)
         events = session["events"]
         end_time = time.time()
+        duration = end_time - session["start_time"]
+
+        logger.debug(
+            f"Session data: intent_id={intent_id}, "
+            f"start_time={session['start_time']:.3f}, end_time={end_time:.3f}, "
+            f"duration={duration:.3f}s, event_count={len(events)}"
+        )
 
         # Count by type
         by_type: Dict[str, int] = {}
@@ -236,16 +287,19 @@ class InterruptionTracker:
         # Calculate total interruption time
         total_time = sum(e.duration or 0.0 for e in events)
 
+        total_count = sum(
+            1 for e in events
+            if e.interruption_type != InterruptionType.FOCUS_REGAINED
+        )
+        weighted_count = sum(
+            self.TYPE_WEIGHTS.get(e.interruption_type, 1.0)
+            for e in events
+        )
+
         summary = InterruptionSummary(
             intent_id=intent_id,
-            total_count=sum(
-                1 for e in events
-                if e.interruption_type != InterruptionType.FOCUS_REGAINED
-            ),
-            weighted_count=sum(
-                self.TYPE_WEIGHTS.get(e.interruption_type, 1.0)
-                for e in events
-            ),
+            total_count=total_count,
+            weighted_count=weighted_count,
             by_type=by_type,
             total_interruption_time=total_time,
             events=events,
@@ -254,6 +308,14 @@ class InterruptionTracker:
         )
 
         self.completed_summaries.append(summary)
+
+        logger.info(
+            f"Session ended: intent_id={intent_id}, "
+            f"total_count={total_count}, weighted_count={weighted_count:.3f}, "
+            f"by_type={by_type}, total_interruption_time={total_time:.3f}s, "
+            f"session_duration={duration:.3f}s"
+        )
+
         return summary
 
     def get_active_session_ids(self) -> List[str]:
@@ -323,6 +385,10 @@ class BoundaryDaemonListener:
         self.active_intent_resolver = active_intent_resolver
         self._connected = False
         self._daemon_url: Optional[str] = None
+        logger.info(
+            f"BoundaryDaemonListener initialized: "
+            f"has_resolver={active_intent_resolver is not None}"
+        )
 
     def handle_boundary_event(self, event: Dict[str, Any]) -> Optional[InterruptionEvent]:
         """
@@ -345,34 +411,67 @@ class BoundaryDaemonListener:
             The created InterruptionEvent, or None if event was ignored
         """
         event_type = event.get("type", "")
+        logger.debug(
+            f"Received boundary event: type={event_type}, "
+            f"intent_id={event.get('intent_id')}, source={event.get('source')}, "
+            f"timestamp={event.get('timestamp')}, raw_event={event}"
+        )
 
         # Map to interruption type
         interruption_type = self.EVENT_TYPE_MAP.get(event_type)
         if interruption_type is None:
-            # Unknown event type, ignore
+            logger.debug(
+                f"Unknown event type ignored: type={event_type}, "
+                f"known_types={list(self.EVENT_TYPE_MAP.keys())}"
+            )
             return None
 
         # Resolve intent_id
         intent_id = event.get("intent_id")
         if not intent_id and self.active_intent_resolver:
-            intent_id = self.active_intent_resolver()
+            logger.debug("No intent_id in event, attempting to resolve via resolver")
+            try:
+                intent_id = self.active_intent_resolver()
+                logger.debug(f"Resolver returned intent_id={intent_id}")
+            except Exception as e:
+                logger.error(
+                    f"active_intent_resolver raised exception: {type(e).__name__}: {e}"
+                )
+                intent_id = None
 
         if not intent_id:
-            # No intent to associate with, ignore
+            logger.debug(
+                f"No intent_id available, ignoring event: type={event_type}"
+            )
             return None
 
         # Create interruption event
+        timestamp = event.get("timestamp", time.time())
         interruption_event = InterruptionEvent(
             intent_id=intent_id,
-            timestamp=event.get("timestamp", time.time()),
+            timestamp=timestamp,
             interruption_type=interruption_type,
             source=event.get("source"),
             duration=event.get("duration"),
             metadata=event.get("metadata", {}),
         )
 
+        logger.info(
+            f"Processing boundary event: type={event_type}, "
+            f"mapped_type={interruption_type.value}, intent_id={intent_id}, "
+            f"source={event.get('source')}, timestamp={timestamp:.3f}"
+        )
+
         # Record to tracker
-        self.tracker.record_interruption(interruption_event)
+        try:
+            self.tracker.record_interruption(interruption_event)
+            logger.debug(f"Event recorded to tracker: intent_id={intent_id}")
+        except Exception as e:
+            logger.error(
+                f"Failed to record interruption: {type(e).__name__}: {e}, "
+                f"intent_id={intent_id}, event={event}"
+            )
+            raise
 
         return interruption_event
 
@@ -391,15 +490,19 @@ class BoundaryDaemonListener:
         Returns:
             True if connection successful, False otherwise
         """
+        logger.info(f"Connecting to Boundary Daemon: url={daemon_url}")
         # Stub implementation - real implementation would connect to daemon
         self._daemon_url = daemon_url
         self._connected = True
+        logger.info(f"Connected to Boundary Daemon (stub): url={daemon_url}")
         return True
 
     def disconnect(self) -> None:
         """Disconnect from Boundary Daemon."""
+        logger.info(f"Disconnecting from Boundary Daemon: url={self._daemon_url}")
         self._connected = False
         self._daemon_url = None
+        logger.info("Disconnected from Boundary Daemon")
 
     @property
     def is_connected(self) -> bool:
@@ -516,10 +619,19 @@ def calculate_effort_factor(
     Returns:
         Effort multiplication factor (>= 1.0)
     """
-    factor = 1.0 + (weighted_interruptions * 0.35)
+    base_factor = 1.0 + (weighted_interruptions * 0.35)
+    bonus = 0.0
 
     if raw_count and raw_count > 10:
-        factor += (raw_count - 10) * 0.1
+        bonus = (raw_count - 10) * 0.1
+
+    factor = base_factor + bonus
+
+    logger.debug(
+        f"calculate_effort_factor: weighted={weighted_interruptions:.3f}, "
+        f"raw_count={raw_count}, base_factor={base_factor:.3f}, "
+        f"bonus={bonus:.3f}, final_factor={factor:.3f}"
+    )
 
     return factor
 
@@ -537,16 +649,27 @@ def integrate_with_scoring_context(
         summary: InterruptionSummary from tracker
         scoring_context: ScoringContext to update
     """
+    logger.debug(
+        f"integrate_with_scoring_context: intent_id={summary.intent_id}, "
+        f"total_count={summary.total_count}, weighted_count={summary.weighted_count:.3f}"
+    )
+
     # Update the interruptions count
+    old_interruptions = getattr(scoring_context, "interruptions", None)
     scoring_context.interruptions = summary.total_count
+
+    logger.debug(
+        f"Updated scoring_context.interruptions: {old_interruptions} -> {summary.total_count}"
+    )
 
     # Add detailed data to metadata if it exists
     if hasattr(scoring_context, "metadata") and scoring_context.metadata is not None:
         scoring_context.metadata["interruption_summary"] = summary.to_dict()
         scoring_context.metadata["weighted_interruptions"] = summary.weighted_count
+        logger.debug("Added interruption_summary to scoring_context.metadata")
     elif hasattr(scoring_context, "user_override"):
         # Store in user_override as fallback
-        pass
+        logger.debug("No metadata attribute, skipping detailed summary")
 
 
 def create_boundary_daemon_hook(
@@ -567,6 +690,11 @@ def create_boundary_daemon_hook(
     Returns:
         Tuple of (InterruptionTracker, BoundaryDaemonListener)
     """
+    logger.info(
+        f"create_boundary_daemon_hook: creating_new_tracker={tracker is None}, "
+        f"has_resolver={active_intent_resolver is not None}"
+    )
     tracker = tracker or InterruptionTracker()
     listener = BoundaryDaemonListener(tracker, active_intent_resolver)
+    logger.info("Boundary daemon hook created successfully")
     return tracker, listener
