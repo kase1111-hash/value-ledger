@@ -555,13 +555,13 @@ Past receipts remain immutable.
 | Explicit Revocation | `core.py` | ✅ Implemented |
 | Reusability Metric | `heuristics.py` | ✅ Implemented |
 | Boundary Daemon Integration | `interruption.py` | ✅ Implemented |
+| MP-02 Privacy & Agency Controls | `privacy.py` | ✅ Implemented |
 
 ## Pending Features
 
 | Feature | Priority | Status |
 |---------|----------|--------|
 | Common Module Integration | Low | Awaiting common module |
-| MP-02 Privacy & Agency Controls | Medium | Not implemented |
 | MP-02 External Compatibility | Low | Not implemented |
 | Enhanced Validation Criteria | Low | Not implemented |
 
@@ -576,3 +576,4 @@ Past receipts remain immutable.
 | 0.2.0 | 2025-12-19 | Added NatLangChain compatibility section |
 | 0.3.0 | 2025-12-23 | Added Boundary Daemon, Common Module, MP-02 Privacy, External Compatibility, Enhanced Validation |
 | 0.3.1 | 2025-12-23 | Updated all implementation statuses to reflect actual code state |
+| 0.4.0 | 2025-12-23 | Implemented MP-02 Privacy & Agency Controls (consent, encryption, filtering)

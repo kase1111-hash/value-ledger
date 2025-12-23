@@ -58,8 +58,23 @@ from .interruption import (
     calculate_effort_factor,
     create_boundary_daemon_hook,
 )
+from .privacy import (
+    PrivacyLevel,
+    ConsentStatus,
+    RevocationScope,
+    ObservationConsent,
+    EncryptedContent,
+    SignalEncryptor,
+    PrivacyPolicy,
+    PrivacyFilter,
+    ConsentRegistry,
+    AgencyController,
+    create_privacy_controller,
+    encrypt_signal_content,
+    decrypt_signal_content,
+)
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 __all__ = [
     # Core classes
@@ -113,4 +128,18 @@ __all__ = [
     "MockBoundaryEmitter",
     "calculate_effort_factor",
     "create_boundary_daemon_hook",
+    # MP-02 Privacy & Agency Controls
+    "PrivacyLevel",
+    "ConsentStatus",
+    "RevocationScope",
+    "ObservationConsent",
+    "EncryptedContent",
+    "SignalEncryptor",
+    "PrivacyPolicy",
+    "PrivacyFilter",
+    "ConsentRegistry",
+    "AgencyController",
+    "create_privacy_controller",
+    "encrypt_signal_content",
+    "decrypt_signal_content",
 ]
