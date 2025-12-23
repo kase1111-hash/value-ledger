@@ -73,8 +73,25 @@ from .privacy import (
     encrypt_signal_content,
     decrypt_signal_content,
 )
+from .compatibility import (
+    NegotiationStatus,
+    RatificationMethod,
+    MP01Proposal,
+    MP01Ratification,
+    MP01Formatter,
+    LicenseType,
+    LicenseReference,
+    DelegationRecord,
+    LicenseManager,
+    AuditFormat,
+    AuditEntry,
+    AuditExporter,
+    ProtocolAdapter,
+    create_protocol_adapter,
+    export_receipt_for_audit,
+)
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 __all__ = [
     # Core classes
@@ -142,4 +159,20 @@ __all__ = [
     "create_privacy_controller",
     "encrypt_signal_content",
     "decrypt_signal_content",
+    # MP-02 External Compatibility
+    "NegotiationStatus",
+    "RatificationMethod",
+    "MP01Proposal",
+    "MP01Ratification",
+    "MP01Formatter",
+    "LicenseType",
+    "LicenseReference",
+    "DelegationRecord",
+    "LicenseManager",
+    "AuditFormat",
+    "AuditEntry",
+    "AuditExporter",
+    "ProtocolAdapter",
+    "create_protocol_adapter",
+    "export_receipt_for_audit",
 ]
