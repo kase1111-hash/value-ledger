@@ -863,6 +863,677 @@ This section documents features specified in the documentation but not yet imple
 
 ---
 
+### 17.11 Boundary Daemon Integration
+
+**Source:** INTEGRATION.md §4
+
+**Status:** Not implemented (passive integration via IntentLog)
+
+**Description:** Direct integration with Boundary Daemon for interruption tracking and context switch detection that affects effort scoring.
+
+**Implementation Plan:**
+
+1. **Create InterruptionTracker** (`value_ledger/interruption.py`)
+   ```python
+   @dataclass
+   class InterruptionEvent:
+       intent_id: str
+       timestamp: float
+       interruption_type: str  # "external", "self", "context_switch"
+       source: Optional[str] = None  # What caused the interruption
+       duration: Optional[float] = None  # How long the interruption lasted
+
+   class InterruptionTracker:
+       def __init__(self):
+           self.active_sessions: Dict[str, List[InterruptionEvent]] = {}
+
+       def start_session(self, intent_id: str) -> None:
+           """Begin tracking interruptions for an intent"""
+
+       def record_interruption(self, event: InterruptionEvent) -> None:
+           """Record an interruption event"""
+
+       def get_interruption_count(self, intent_id: str) -> int:
+           """Get total interruptions for an intent"""
+
+       def get_weighted_interruptions(self, intent_id: str) -> float:
+           """
+           Calculate weighted interruption score:
+           - External interruptions: weight 1.0
+           - Context switches: weight 0.7
+           - Self-interruptions: weight 0.3
+           """
+
+       def end_session(self, intent_id: str) -> InterruptionSummary:
+           """Finalize session and return summary for effort scoring"""
+   ```
+
+2. **Boundary Daemon Event Listener**
+   ```python
+   class BoundaryDaemonListener:
+       def __init__(self, tracker: InterruptionTracker):
+           self.tracker = tracker
+
+       def handle_boundary_event(self, event: BoundaryEvent) -> None:
+           """
+           Handle events from Boundary Daemon:
+           - "notification_received"
+           - "context_switch"
+           - "focus_lost"
+           - "focus_regained"
+           """
+
+       def connect_to_daemon(self, daemon_url: str) -> None:
+           """Subscribe to Boundary Daemon event stream"""
+   ```
+
+3. **Integration with Effort Scoring**
+   ```python
+   # Update EffortScorer to use InterruptionTracker
+   class EffortScorer(HeuristicScorer):
+       def __init__(self, interruption_tracker: Optional[InterruptionTracker] = None):
+           self.tracker = interruption_tracker
+
+       def calculate_interruption_factor(self, intent_id: str) -> float:
+           if self.tracker is None:
+               # Fall back to IntentLog-provided count
+               return 1.0
+           weighted = self.tracker.get_weighted_interruptions(intent_id)
+           return 1.0 + (weighted * 0.35)
+   ```
+
+4. **Compatibility Requirements**
+
+   ✅ **Boundary Daemon MUST:**
+   - Track interruption count per intent session
+   - Report count to IntentLog for inclusion in events
+   - Emit events in real-time for direct integration
+
+   ⚠️ **Boundary Daemon SHOULD:**
+   - Define "interruption" consistently (context switch, notification, etc.)
+   - Reset count on new intent start
+   - Distinguish between external and self-interruptions
+
+   ❌ **Boundary Daemon MUST NOT:**
+   - Report negative interruption counts
+   - Count normal pauses as interruptions
+
+---
+
+### 17.12 Common Module Integration
+
+**Source:** INTEGRATION.md §6
+
+**Status:** Not implemented (using local implementations)
+
+**Description:** Integration with the Common module for shared utilities including ID generation, timestamp validation, and structured logging.
+
+**Implementation Plan:**
+
+1. **ID Generation Utilities**
+   ```python
+   # Current local implementation to be replaced:
+   def generate_entry_id(data: str) -> str:
+       """Deterministic ID generation (replace with common.utils if available)"""
+       return hashlib.sha256(data.encode()).hexdigest()
+
+   # Expected from common module:
+   from common.utils import generate_entry_id, generate_uuid
+   ```
+
+2. **Timestamp Validation**
+   ```python
+   # Expected from common module:
+   class TimestampValidator:
+       def validate(self, timestamp: float) -> ValidationResult:
+           """Validate timestamp is reasonable (not future, not too old)"""
+
+       def check_drift(self, ts1: float, ts2: float, max_drift: float) -> bool:
+           """Check if two timestamps are within acceptable drift"""
+
+       def normalize(self, timestamp: float) -> float:
+           """Normalize timestamp to consistent precision"""
+   ```
+
+3. **Structured Logging**
+   ```python
+   # Expected from common module:
+   from common.logging import get_structured_logger, AuditLogger
+
+   class ValueLedger:
+       def __init__(self, storage_path: str):
+           self.logger = get_structured_logger("value_ledger")
+           self.audit = AuditLogger("value_ledger.audit")
+
+       def accrue(self, ...):
+           self.audit.log_event("accrue", entry_id=entry.id, value=entry.value_vector)
+   ```
+
+4. **Migration Path**
+   ```python
+   # When common module is available:
+   try:
+       from common.utils import generate_entry_id
+       from common.validation import TimestampValidator
+       from common.logging import get_structured_logger
+   except ImportError:
+       # Fall back to local implementations
+       from value_ledger._compat import (
+           generate_entry_id,
+           TimestampValidator,
+           get_structured_logger,
+       )
+   ```
+
+5. **Compatibility Requirements**
+
+   ✅ **Common MUST:**
+   - Provide deterministic ID generation (same input → same output)
+   - Use SHA-256 or equivalent cryptographic hash
+   - Maintain backwards compatibility
+
+   ⚠️ **Common SHOULD:**
+   - Include utility for timestamp validation
+   - Provide structured logging helpers
+   - Support audit logging for compliance
+
+---
+
+### 17.13 MP-02 Privacy and Agency Controls
+
+**Source:** MP-02-spec.md §12
+
+**Status:** Not implemented
+
+**Description:** Privacy controls and human agency features as specified in the MP-02 protocol for protecting raw signals while maintaining receipt verifiability.
+
+**Implementation Plan:**
+
+1. **Signal Encryption Layer** (`value_ledger/privacy.py`)
+   ```python
+   class SignalEncryption:
+       """Encrypt raw signals while preserving hash verifiability"""
+
+       def encrypt_signal(
+           self,
+           signal: EffortSignal,
+           key: bytes,
+       ) -> EncryptedSignal:
+           """
+           Encrypt signal content.
+           Hash is computed BEFORE encryption so verification works.
+           """
+
+       def decrypt_signal(
+           self,
+           encrypted: EncryptedSignal,
+           key: bytes,
+       ) -> EffortSignal:
+           """Decrypt signal for authorized access"""
+
+       def verify_encrypted(
+           self,
+           encrypted: EncryptedSignal,
+           expected_hash: str,
+       ) -> bool:
+           """Verify hash matches without decryption"""
+
+   @dataclass
+   class EncryptedSignal:
+       hash: str  # Pre-encryption hash for verification
+       encrypted_content: bytes
+       encryption_metadata: Dict[str, Any]  # Algorithm, key_id, etc.
+   ```
+
+2. **Receipt Privacy Controls**
+   ```python
+   class ReceiptPrivacyManager:
+       """Control what information is exposed in receipts"""
+
+       def __init__(self, default_privacy: PrivacyLevel = PrivacyLevel.STANDARD):
+           self.default_privacy = default_privacy
+
+       def create_public_receipt(
+           self,
+           receipt: EffortReceipt,
+           privacy_level: PrivacyLevel,
+       ) -> PublicReceipt:
+           """
+           Create receipt for public/third-party consumption.
+
+           Privacy levels:
+           - MINIMAL: Only hashes and timestamps
+           - STANDARD: Hashes, timestamps, summary (default)
+           - DETAILED: Include validation metadata
+           - FULL: Complete receipt (owner only)
+           """
+
+       def redact_receipt(
+           self,
+           receipt: EffortReceipt,
+           fields_to_redact: List[str],
+       ) -> RedactedReceipt:
+           """Selectively redact specific fields"""
+
+   class PrivacyLevel(Enum):
+       MINIMAL = "minimal"
+       STANDARD = "standard"
+       DETAILED = "detailed"
+       FULL = "full"
+   ```
+
+3. **Future Observation Revocation**
+   ```python
+   class ObservationConsent:
+       """Manage human consent for future observation"""
+
+       def grant_observation(
+           self,
+           human_id: str,
+           scope: ObservationScope,
+           duration: Optional[timedelta] = None,
+       ) -> ConsentGrant:
+           """Grant consent for future observation"""
+
+       def revoke_observation(
+           self,
+           human_id: str,
+           scope: Optional[ObservationScope] = None,
+       ) -> RevocationRecord:
+           """
+           Revoke future observation consent.
+           Past receipts remain immutable per MP-02 §12.
+           """
+
+       def check_consent(
+           self,
+           human_id: str,
+           observation_type: str,
+       ) -> bool:
+           """Check if observation is currently permitted"""
+
+   @dataclass
+   class ObservationScope:
+       modalities: List[str]  # ["voice", "text", "commands"]
+       contexts: List[str]  # ["work", "personal"]
+       purposes: List[str]  # ["effort_tracking", "novelty_scoring"]
+   ```
+
+4. **Immutability Enforcement**
+   ```python
+   class ReceiptImmutability:
+       """Enforce immutability of past receipts"""
+
+       def seal_receipt(self, receipt: EffortReceipt) -> SealedReceipt:
+           """
+           Seal receipt to prevent modification.
+           Returns cryptographic seal for verification.
+           """
+
+       def verify_seal(self, sealed: SealedReceipt) -> bool:
+           """Verify receipt has not been modified"""
+
+       def create_amendment(
+           self,
+           original: SealedReceipt,
+           correction: ReceiptCorrection,
+       ) -> AmendmentRecord:
+           """
+           Create amendment record (original remains unchanged).
+           Used for corrections without altering history.
+           """
+   ```
+
+---
+
+### 17.14 MP-02 External Protocol Compatibility
+
+**Source:** MP-02-spec.md §14
+
+**Status:** Not implemented
+
+**Description:** Compatibility with external protocols including MP-01 Negotiation & Ratification, licensing modules, and external audit systems.
+
+**Implementation Plan:**
+
+1. **MP-01 Negotiation Protocol Adapter**
+   ```python
+   class MP01Adapter:
+       """Adapter for MP-01 Negotiation & Ratification protocol"""
+
+       def effort_to_negotiation_payload(
+           self,
+           receipt: EffortReceipt,
+       ) -> NegotiationPayload:
+           """
+           Convert effort receipt to MP-01 negotiation format.
+           Used when effort value is subject to negotiation.
+           """
+
+       def attach_to_contract(
+           self,
+           receipt: EffortReceipt,
+           contract_id: str,
+       ) -> ContractAttachment:
+           """Attach effort receipt to MP-01 contract"""
+
+       def verify_ratification(
+           self,
+           receipt_id: str,
+           ratification: Ratification,
+       ) -> bool:
+           """Verify effort was ratified via MP-01"""
+   ```
+
+2. **Licensing Module Integration**
+   ```python
+   class LicensingAdapter:
+       """Adapter for licensing and delegation modules"""
+
+       def create_license(
+           self,
+           receipt: EffortReceipt,
+           license_type: LicenseType,
+           terms: LicenseTerms,
+       ) -> EffortLicense:
+           """
+           Create license for effort receipt.
+           Enables controlled sharing and delegation.
+           """
+
+       def delegate_effort(
+           self,
+           receipt: EffortReceipt,
+           delegate_id: str,
+           scope: DelegationScope,
+       ) -> DelegationRecord:
+           """Delegate effort value to another party"""
+
+       def verify_license(
+           self,
+           receipt_id: str,
+           license_id: str,
+       ) -> LicenseVerification:
+           """Verify license is valid for receipt"""
+
+   class LicenseType(Enum):
+       VIEW_ONLY = "view_only"
+       DERIVATIVE = "derivative"
+       COMMERCIAL = "commercial"
+       FULL_TRANSFER = "full_transfer"
+   ```
+
+3. **External Audit System Interface**
+   ```python
+   class AuditInterface:
+       """Interface for external audit systems"""
+
+       def export_for_audit(
+           self,
+           entries: List[LedgerEntry],
+           audit_format: AuditFormat,
+       ) -> AuditExport:
+           """
+           Export ledger entries for external audit.
+           Supports multiple audit standards.
+           """
+
+       def generate_audit_proof(
+           self,
+           entry_ids: List[str],
+           audit_scope: AuditScope,
+       ) -> AuditProof:
+           """
+           Generate cryptographic proof for auditors.
+           Proves existence and integrity without full disclosure.
+           """
+
+       def respond_to_audit_query(
+           self,
+           query: AuditQuery,
+           disclosure_level: DisclosureLevel,
+       ) -> AuditResponse:
+           """Respond to specific audit queries"""
+
+   class AuditFormat(Enum):
+       ISO_27001 = "iso_27001"
+       SOC2 = "soc2"
+       GDPR = "gdpr"
+       CUSTOM = "custom"
+   ```
+
+4. **Protocol Version Management**
+   ```python
+   class ProtocolCompatibility:
+       """Manage compatibility across protocol versions"""
+
+       SUPPORTED_PROTOCOLS = {
+           "mp-01": ["1.0", "1.1"],
+           "mp-02": ["1.0"],
+       }
+
+       def check_compatibility(
+           self,
+           protocol: str,
+           version: str,
+       ) -> CompatibilityResult:
+           """Check if protocol version is supported"""
+
+       def upgrade_receipt(
+           self,
+           receipt: EffortReceipt,
+           target_version: str,
+       ) -> EffortReceipt:
+           """Upgrade receipt to newer protocol version"""
+   ```
+
+---
+
+### 17.15 Enhanced Validation Criteria
+
+**Source:** MP-02-spec.md §7
+
+**Status:** Not implemented
+
+**Description:** Detailed validation criteria for effort segments including linguistic coherence, conceptual progression, internal consistency, and synthesis detection.
+
+**Implementation Plan:**
+
+1. **Linguistic Coherence Assessor**
+   ```python
+   class LinguisticCoherenceAssessor:
+       """Assess linguistic coherence of effort segments"""
+
+       def assess_coherence(
+           self,
+           segment: EffortSegment,
+       ) -> CoherenceScore:
+           """
+           Assess linguistic coherence across signals.
+
+           Checks:
+           - Grammatical consistency
+           - Vocabulary stability
+           - Topic continuity
+           - Register consistency
+           """
+
+       def detect_discontinuities(
+           self,
+           segment: EffortSegment,
+       ) -> List[Discontinuity]:
+           """Identify points of linguistic discontinuity"""
+
+   @dataclass
+   class CoherenceScore:
+       overall: float  # 0.0 - 1.0
+       grammatical: float
+       vocabulary: float
+       topic: float
+       register: float
+       confidence: float
+       discontinuities: List[Discontinuity]
+   ```
+
+2. **Conceptual Progression Analyzer**
+   ```python
+   class ConceptualProgressionAnalyzer:
+       """Analyze conceptual development over time"""
+
+       def analyze_progression(
+           self,
+           segment: EffortSegment,
+       ) -> ProgressionAnalysis:
+           """
+           Track how concepts develop through the segment.
+
+           Metrics:
+           - Concept introduction rate
+           - Concept refinement patterns
+           - Depth vs breadth ratio
+           - Iteration patterns (cycles of revision)
+           """
+
+       def identify_breakthroughs(
+           self,
+           segment: EffortSegment,
+       ) -> List[Breakthrough]:
+           """Identify potential conceptual breakthroughs"""
+
+       def map_concept_evolution(
+           self,
+           segment: EffortSegment,
+       ) -> ConceptMap:
+           """Create map of concept evolution over time"""
+
+   @dataclass
+   class ProgressionAnalysis:
+       progression_score: float  # 0.0 - 1.0
+       introduction_rate: float  # New concepts per minute
+       refinement_ratio: float  # Refinements vs new concepts
+       depth_breadth_ratio: float
+       iteration_count: int
+       breakthroughs: List[Breakthrough]
+   ```
+
+3. **Internal Consistency Checker**
+   ```python
+   class InternalConsistencyChecker:
+       """Check internal consistency of effort segments"""
+
+       def check_consistency(
+           self,
+           segment: EffortSegment,
+       ) -> ConsistencyReport:
+           """
+           Check for internal contradictions and consistency.
+
+           Checks:
+           - Temporal consistency (no future references)
+           - Logical consistency (no contradictions)
+           - Reference consistency (valid back-references)
+           - Style consistency (uniform approach)
+           """
+
+       def find_contradictions(
+           self,
+           segment: EffortSegment,
+       ) -> List[Contradiction]:
+           """Identify potential contradictions in content"""
+
+   @dataclass
+   class ConsistencyReport:
+       is_consistent: bool
+       consistency_score: float
+       temporal_issues: List[TemporalIssue]
+       logical_issues: List[LogicalIssue]
+       reference_issues: List[ReferenceIssue]
+       style_issues: List[StyleIssue]
+   ```
+
+4. **Synthesis vs Duplication Detector**
+   ```python
+   class SynthesisDetector:
+       """Detect synthesis vs duplication in effort"""
+
+       def classify_content(
+           self,
+           segment: EffortSegment,
+           reference_corpus: Optional[List[str]] = None,
+       ) -> SynthesisClassification:
+           """
+           Classify content as synthesis or duplication.
+
+           Classifications:
+           - ORIGINAL: Novel synthesis
+           - DERIVATIVE: Building on existing work
+           - COMPILATION: Aggregating existing content
+           - DUPLICATION: Copy with minimal change
+           - UNKNOWN: Insufficient data to classify
+           """
+
+       def calculate_originality(
+           self,
+           segment: EffortSegment,
+           reference_corpus: List[str],
+       ) -> float:
+           """Calculate originality score against corpus"""
+
+       def detect_source_patterns(
+           self,
+           segment: EffortSegment,
+       ) -> List[SourcePattern]:
+           """Detect patterns suggesting external sources"""
+
+   class SynthesisClassification(Enum):
+       ORIGINAL = "original"
+       DERIVATIVE = "derivative"
+       COMPILATION = "compilation"
+       DUPLICATION = "duplication"
+       UNKNOWN = "unknown"
+   ```
+
+5. **Integrated Validation Pipeline**
+   ```python
+   class EnhancedValidator:
+       """Enhanced validator combining all assessment criteria"""
+
+       def __init__(self):
+           self.coherence = LinguisticCoherenceAssessor()
+           self.progression = ConceptualProgressionAnalyzer()
+           self.consistency = InternalConsistencyChecker()
+           self.synthesis = SynthesisDetector()
+
+       def validate_segment(
+           self,
+           segment: EffortSegment,
+           validation_level: ValidationLevel = ValidationLevel.STANDARD,
+       ) -> EnhancedValidationResult:
+           """
+           Run full validation pipeline.
+
+           Validation levels:
+           - QUICK: Coherence only
+           - STANDARD: Coherence + Progression
+           - THOROUGH: All assessments
+           - FORENSIC: Deep analysis with source detection
+           """
+
+       def generate_validation_summary(
+           self,
+           result: EnhancedValidationResult,
+       ) -> str:
+           """Generate deterministic summary per MP-02 §7 requirement"""
+
+   class ValidationLevel(Enum):
+       QUICK = "quick"
+       STANDARD = "standard"
+       THOROUGH = "thorough"
+       FORENSIC = "forensic"
+   ```
+
+---
+
 ## 18. Implementation Priority
 
 | Feature | Priority | Complexity | Dependencies |
@@ -875,6 +1546,11 @@ This section documents features specified in the documentation but not yet imple
 | Multi-Parent Aggregation (17.4) | Medium | Medium | None |
 | Effort Receipt Protocol (17.2) | Medium | High | Proof System (17.1) |
 | NatLangChain Compatibility (§16) | Medium | Medium | Proof System (17.1), MP-02 (17.2) |
+| Boundary Daemon Integration (17.11) | Medium | Medium | Boundary Daemon module |
+| Common Module Integration (17.12) | Low | Low | Common module |
+| MP-02 Privacy & Agency (17.13) | Medium | High | MP-02 (17.2) |
+| MP-02 External Compatibility (17.14) | Low | High | MP-02 (17.2), External protocols |
+| Enhanced Validation Criteria (17.15) | Low | High | MP-02 (17.2) |
 | NatLangChain Export (17.7) | Low | Medium | NatLangChain module, NLC Compatibility (§16) |
 | Synth-Mind Integration (17.6) | Low | Medium | Synth-Mind module |
 | Reusability Metric (17.10) | Low | Low | Migration needed |
@@ -894,11 +1570,18 @@ This section documents features specified in the documentation but not yet imple
 **Phase 3: Protocol Integration (Medium Priority)**
 7. Effort Receipt Protocol (17.2) — Full MP-02 implementation
 8. NatLangChain Compatibility (§16) — Anchoring preparation
+9. Boundary Daemon Integration (17.11) — Direct interruption tracking
 
 **Phase 4: External Integration (Low Priority)**
-9. NatLangChain Export (17.7) — Production anchoring
-10. Synth-Mind Integration (17.6) — Cognitive tier tracking
-11. Reusability Metric (17.10) — Schema extension
+10. NatLangChain Export (17.7) — Production anchoring
+11. Synth-Mind Integration (17.6) — Cognitive tier tracking
+12. Reusability Metric (17.10) — Schema extension
+13. Common Module Integration (17.12) — Shared utilities
+
+**Phase 5: Advanced Features (Low Priority)**
+14. MP-02 Privacy & Agency (17.13) — Signal encryption and consent
+15. MP-02 External Compatibility (17.14) — Protocol adapters
+16. Enhanced Validation Criteria (17.15) — Advanced effort validation
 
 ---
 
@@ -909,3 +1592,4 @@ This section documents features specified in the documentation but not yet imple
 | 0.1.0 | 2024 | Initial specification |
 | 0.1.1 | 2024 | Added implementation status and plans |
 | 0.2.0 | 2025-12-19 | Added NatLangChain compatibility section, updated section numbering, verified implementation status against codebase |
+| 0.3.0 | 2025-12-23 | Added unimplemented features from INTEGRATION.md and MP-02-spec.md: Boundary Daemon Integration (17.11), Common Module Integration (17.12), MP-02 Privacy & Agency Controls (17.13), MP-02 External Protocol Compatibility (17.14), Enhanced Validation Criteria (17.15). Added Phase 5 to implementation roadmap. |
