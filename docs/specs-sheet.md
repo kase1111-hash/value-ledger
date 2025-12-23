@@ -563,7 +563,7 @@ Past receipts remain immutable.
 | Feature | Priority | Status |
 |---------|----------|--------|
 | Common Module Integration | Low | Awaiting common module |
-| Enhanced Validation Criteria | Low | Not implemented |
+| Enhanced Validation Criteria | Low | ✅ Implemented |
 
 ---
 
@@ -578,3 +578,4 @@ Past receipts remain immutable.
 | 0.3.1 | 2025-12-23 | Updated all implementation statuses to reflect actual code state |
 | 0.4.0 | 2025-12-23 | Implemented MP-02 Privacy & Agency Controls (consent, encryption, filtering)
 | 0.5.0 | 2025-12-23 | Implemented MP-02 External Compatibility (MP-01, licensing, audit formats)
+| 0.6.0 | 2025-12-23 | Implemented Enhanced Validation Criteria (MP-02 §7 compliance)

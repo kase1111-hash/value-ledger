@@ -76,6 +76,53 @@ def _ensure_crypto():
         raise RuntimeError("Cryptography library required but not available")
 
 
+def _validate_storage_path(path: str, base_dir: Optional[str] = None) -> Path:
+    """
+    Validate storage path to prevent path traversal attacks.
+
+    Args:
+        path: The path to validate
+        base_dir: Optional base directory to restrict paths within
+
+    Returns:
+        Resolved Path object
+
+    Raises:
+        ValueError: If path is invalid or attempts traversal
+    """
+    if not path:
+        raise ValueError("Storage path cannot be empty")
+
+    # Convert to Path and resolve to absolute
+    resolved = Path(path).resolve()
+
+    # Check for null bytes (common attack vector)
+    if "\x00" in str(path):
+        raise ValueError("Invalid characters in path")
+
+    # If base_dir specified, ensure path is within it
+    if base_dir:
+        base_resolved = Path(base_dir).resolve()
+        try:
+            resolved.relative_to(base_resolved)
+        except ValueError:
+            raise ValueError(f"Path must be within {base_dir}")
+
+    # Block common sensitive paths
+    sensitive_patterns = [
+        "/etc/", "/proc/", "/sys/", "/dev/",
+        "/.ssh/", "/.aws/", "/.config/",
+        "/passwd", "/shadow", "/id_rsa",
+    ]
+    path_str = str(resolved).lower()
+    for pattern in sensitive_patterns:
+        if pattern in path_str:
+            raise ValueError(f"Access to sensitive path not allowed: {pattern}")
+
+    logger.debug(f"Path validated: {resolved}")
+    return resolved
+
+
 class PrivacyLevel(str, Enum):
     """Privacy levels for signals and receipts."""
     PUBLIC = "public"  # No restrictions
@@ -385,11 +432,19 @@ class ConsentRegistry:
     Registry for managing observation consent across sessions.
 
     Tracks who has consented to observation and who has revoked.
+
+    Security:
+    - Storage paths are validated to prevent path traversal attacks
     """
 
     def __init__(self, storage_path: Optional[str] = None):
         self._consents: Dict[str, ObservationConsent] = {}
-        self._storage_path = storage_path
+        self._storage_path: Optional[Path] = None
+
+        # Validate storage path if provided
+        if storage_path:
+            self._storage_path = _validate_storage_path(storage_path)
+
         self._load_from_storage()
 
     def _load_from_storage(self) -> None:
@@ -397,12 +452,11 @@ class ConsentRegistry:
         if not self._storage_path:
             return
 
-        path = Path(self._storage_path)
-        if not path.exists():
+        if not self._storage_path.exists():
             return
 
         try:
-            with open(path, "r") as f:
+            with open(self._storage_path, "r") as f:
                 data = json.load(f)
                 for human_id, consent_data in data.items():
                     self._consents[human_id] = ObservationConsent(

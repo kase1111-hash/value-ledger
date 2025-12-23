@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import time
 import hashlib
+import logging
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Dict, List, Optional, Any, TYPE_CHECKING
@@ -19,10 +20,53 @@ import os
 if TYPE_CHECKING:
     from .heuristics import ScoringContext
 
+logger = logging.getLogger(__name__)
+
 # Placeholder for future imports from common utils
 def generate_entry_id(data: str) -> str:
     """Deterministic ID generation (replace with common.utils if available)"""
     return hashlib.sha256(data.encode()).hexdigest()
+
+
+def _validate_ledger_path(path: str | Path) -> Path:
+    """
+    Validate ledger storage path to prevent path traversal attacks.
+
+    Args:
+        path: The path to validate
+
+    Returns:
+        Resolved Path object
+
+    Raises:
+        ValueError: If path is invalid or attempts traversal
+    """
+    path_str = str(path)
+
+    # Check for null bytes
+    if "\x00" in path_str:
+        raise ValueError("Invalid characters in path")
+
+    # Resolve to absolute path
+    resolved = Path(path_str).resolve()
+
+    # Block sensitive system paths
+    sensitive_patterns = [
+        "/etc/", "/proc/", "/sys/", "/dev/",
+        "/.ssh/", "/.aws/", "/.config/",
+        "/passwd", "/shadow", "/id_rsa",
+    ]
+    resolved_str = str(resolved).lower()
+    for pattern in sensitive_patterns:
+        if pattern in resolved_str:
+            raise ValueError(f"Access to sensitive path not allowed: {pattern}")
+
+    # Ensure it's a file path, not trying to write to root
+    if str(resolved) == "/":
+        raise ValueError("Cannot use root as storage path")
+
+    logger.debug(f"Ledger path validated: {resolved}")
+    return resolved
 
 
 def compute_content_hash(content: Optional[str]) -> Optional[str]:
@@ -203,10 +247,14 @@ class ValueLedger:
     """
     Main ledger class - append-only, local JSON storage.
     Designed for offline-first operation.
+
+    Security:
+    - Storage paths are validated to prevent path traversal attacks
     """
 
     def __init__(self, storage_path: str | Path = "ledger.jsonl"):
-        self.storage_path = Path(storage_path)
+        # Validate storage path to prevent path traversal
+        self.storage_path = _validate_ledger_path(storage_path)
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
         self.entries: List[LedgerEntry] = self._load_all()
         self.merkle_tree = MerkleTree()

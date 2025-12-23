@@ -24,6 +24,66 @@ from enum import Enum
 import urllib.request
 import urllib.error
 import urllib.parse
+import ipaddress
+import logging
+import socket
+
+logger = logging.getLogger(__name__)
+
+
+def _validate_url(url: str, allow_private: bool = False) -> None:
+    """
+    Validate URL to prevent SSRF attacks.
+
+    Args:
+        url: URL to validate
+        allow_private: If True, allow private/internal addresses (for testing)
+
+    Raises:
+        ValueError: If URL is invalid or points to restricted address
+    """
+    parsed = urllib.parse.urlparse(url)
+
+    # Only allow HTTP and HTTPS
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"Invalid URL scheme: {parsed.scheme}. Only http/https allowed.")
+
+    # Must have a hostname
+    if not parsed.hostname:
+        raise ValueError("URL must have a hostname")
+
+    hostname = parsed.hostname.lower()
+
+    # Block common SSRF targets
+    blocked_hosts = {
+        "metadata.google.internal",
+        "169.254.169.254",  # AWS/GCP metadata
+        "metadata.azure.internal",
+        "100.100.100.200",  # Alibaba metadata
+    }
+
+    if hostname in blocked_hosts:
+        raise ValueError(f"Access to {hostname} is not allowed")
+
+    if not allow_private:
+        # Try to resolve and check if IP is private
+        try:
+            # Check if hostname is already an IP
+            try:
+                ip = ipaddress.ip_address(hostname)
+                if ip.is_private or ip.is_loopback or ip.is_link_local:
+                    raise ValueError(f"Private/internal addresses not allowed: {hostname}")
+            except ValueError:
+                # Not an IP, try to resolve
+                resolved = socket.gethostbyname(hostname)
+                ip = ipaddress.ip_address(resolved)
+                if ip.is_private or ip.is_loopback or ip.is_link_local:
+                    raise ValueError(f"URL resolves to private address: {resolved}")
+        except socket.gaierror:
+            # Can't resolve - allow (will fail at connection time)
+            pass
+
+    logger.debug(f"URL validated: {url}")
 
 
 class AnchorStatus(str, Enum):
@@ -146,15 +206,63 @@ class NLCClient:
     - POST /entry/validate Validate entry before submission
     - GET  /chain          Query chain entries
     - GET  /chain/narrative Human-readable chain view
+
+    Security:
+    - URL validation prevents SSRF attacks
+    - Set allow_private=True only for local development/testing
     """
+
+    # Maximum response size (10 MB)
+    MAX_RESPONSE_SIZE = 10 * 1024 * 1024
 
     def __init__(
         self,
         base_url: str = "http://localhost:5000",
         timeout: float = 30.0,
+        allow_private: bool = True,  # Default True for backward compatibility
+        max_response_size: int = MAX_RESPONSE_SIZE,
     ):
+        """
+        Initialize NatLangChain client.
+
+        Args:
+            base_url: Base URL of NatLangChain API
+            timeout: Request timeout in seconds
+            allow_private: If False, block requests to private/internal IPs (SSRF protection)
+            max_response_size: Maximum response size in bytes (prevents memory exhaustion)
+        """
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self.allow_private = allow_private
+        self.max_response_size = max_response_size
+
+        # Validate URL on initialization
+        _validate_url(self.base_url, allow_private=allow_private)
+
+    def _read_response(self, response) -> bytes:
+        """
+        Read response with size limit to prevent memory exhaustion.
+
+        Raises:
+            ValueError: If response exceeds max_response_size
+        """
+        content_length = response.headers.get("Content-Length")
+        if content_length and int(content_length) > self.max_response_size:
+            raise ValueError(f"Response too large: {content_length} bytes")
+
+        # Read in chunks to enforce limit
+        chunks = []
+        bytes_read = 0
+        while True:
+            chunk = response.read(8192)
+            if not chunk:
+                break
+            bytes_read += len(chunk)
+            if bytes_read > self.max_response_size:
+                raise ValueError(f"Response exceeded {self.max_response_size} bytes")
+            chunks.append(chunk)
+
+        return b"".join(chunks)
 
     def submit_entry(self, record: NLCRecord) -> AnchorResult:
         """
@@ -172,7 +280,7 @@ class NLCClient:
             )
 
             with urllib.request.urlopen(req, timeout=self.timeout) as response:
-                result = json.loads(response.read().decode("utf-8"))
+                result = json.loads(self._read_response(response).decode("utf-8"))
                 return AnchorResult(
                     success=True,
                     anchor_id=result.get("anchor_id"),
@@ -189,6 +297,11 @@ class NLCClient:
             return AnchorResult(
                 success=False,
                 error=f"Connection error: {e.reason}",
+            )
+        except ValueError as e:
+            return AnchorResult(
+                success=False,
+                error=f"Response error: {e}",
             )
         except Exception as e:
             return AnchorResult(
@@ -212,7 +325,7 @@ class NLCClient:
             )
 
             with urllib.request.urlopen(req, timeout=self.timeout) as response:
-                result = json.loads(response.read().decode("utf-8"))
+                result = json.loads(self._read_response(response).decode("utf-8"))
                 return ValidationResult(
                     valid=result.get("valid", False),
                     errors=result.get("errors", []),
@@ -236,7 +349,7 @@ class NLCClient:
             )
 
             with urllib.request.urlopen(req, timeout=self.timeout) as response:
-                return response.read().decode("utf-8")
+                return self._read_response(response).decode("utf-8")
 
         except Exception as e:
             return f"Error fetching narrative: {e}"
@@ -253,7 +366,7 @@ class NLCClient:
             )
 
             with urllib.request.urlopen(req, timeout=self.timeout) as response:
-                result = json.loads(response.read().decode("utf-8"))
+                result = json.loads(self._read_response(response).decode("utf-8"))
                 return [NLCRecord.from_dict(r) for r in result.get("entries", [])]
 
         except Exception:
@@ -270,7 +383,7 @@ class NLCClient:
             )
 
             with urllib.request.urlopen(req, timeout=self.timeout) as response:
-                result = json.loads(response.read().decode("utf-8"))
+                result = json.loads(self._read_response(response).decode("utf-8"))
                 return InclusionProof(
                     record_id=result.get("record_id", ""),
                     anchor_id=anchor_id,

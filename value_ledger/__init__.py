@@ -90,8 +90,27 @@ from .compatibility import (
     create_protocol_adapter,
     export_receipt_for_audit,
 )
+from .validation import (
+    CriteriaType,
+    SeverityLevel,
+    ValidationCriterion,
+    ValidationIssue,
+    CriteriaConfig,
+    CoherenceScore,
+    ProgressionScore,
+    ConsistencyScore,
+    AuthenticityScore,
+    CompletenessScore,
+    ValidationReport,
+    EnhancedValidator,
+    ConsistencyChecker,
+    DuplicationDetector,
+    ConfidenceCalculator,
+    create_enhanced_validator,
+    validate_segment,
+)
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 __all__ = [
     # Core classes
@@ -175,4 +194,22 @@ __all__ = [
     "ProtocolAdapter",
     "create_protocol_adapter",
     "export_receipt_for_audit",
+    # Enhanced Validation Criteria
+    "CriteriaType",
+    "SeverityLevel",
+    "ValidationCriterion",
+    "ValidationIssue",
+    "CriteriaConfig",
+    "CoherenceScore",
+    "ProgressionScore",
+    "ConsistencyScore",
+    "AuthenticityScore",
+    "CompletenessScore",
+    "ValidationReport",
+    "EnhancedValidator",
+    "ConsistencyChecker",
+    "DuplicationDetector",
+    "ConfidenceCalculator",
+    "create_enhanced_validator",
+    "validate_segment",
 ]
