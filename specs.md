@@ -102,18 +102,18 @@ Units are normalized to [0–1] except time.
 |-------|--------|-------|
 | `ledger_id` | ✅ Implemented | As `id` in `LedgerEntry` |
 | `created_at` | ✅ Implemented | As `timestamp` |
-| `owner` | ❌ Not implemented | No owner tracking |
-| `source.memory_id` | ✅ Partial | As `memory_hash` |
+| `owner` | ✅ Implemented | Owner tracking with access control |
+| `source.memory_id` | ✅ Implemented | As `memory_hash` |
 | `source.intent_id` | ✅ Implemented | As `intent_id` |
-| `source.contract_id` | ❌ Not implemented | No contract linking |
-| `value_vector` | ✅ Implemented | All 6 units in `ValueVector` |
-| `classification` | ❌ Not implemented | No classification system |
+| `source.contract_id` | ✅ Implemented | As `contract_id` |
+| `value_vector` | ✅ Implemented | 7 units (T/E/N/F/R/S/U) in `ValueVector` |
+| `classification` | ✅ Implemented | 0-5 levels with access control |
 | `status` | ✅ Implemented | active/frozen/revoked |
-| `derivation.parent_ledger_ids` | ✅ Partial | Single `parent_id` only |
-| `derivation.aggregation_rule` | ❌ Not implemented | No rule specification |
-| `proof.content_hash` | ❌ Not implemented | |
-| `proof.timestamp_proof` | ❌ Not implemented | |
-| `proof.merkle_ref` | ❌ Not implemented | |
+| `derivation.parent_ledger_ids` | ✅ Implemented | Multi-parent via `parent_ids` |
+| `derivation.aggregation_rule` | ✅ Implemented | sum/max/weighted |
+| `proof.content_hash` | ✅ Implemented | SHA-256 via `compute_content_hash()` |
+| `proof.timestamp_proof` | ✅ Implemented | Via `compute_timestamp_proof()` |
+| `proof.merkle_ref` | ✅ Implemented | Via `MerkleTree` class |
 
 ---
 
@@ -135,13 +135,13 @@ Units are normalized to [0–1] except time.
 
 ### 6.2 Aggregation
 
-**Status:** ✅ Partially Implemented
+**Status:** ✅ Fully Implemented
 
 * Multiple ledger entries may be combined
 * Aggregation never deletes originals
 * Parent-child relationships preserved
 
-**Implementation:** `ValueLedger.aggregate_correction()` - supports single parent; multi-parent aggregation not yet implemented.
+**Implementation:** `ValueLedger.aggregate_entries()` - supports multi-parent aggregation with `sum`, `max`, or `weighted` rules. `aggregate_correction()` for single-parent corrections.
 
 ### 6.3 Freezing
 
@@ -157,13 +157,13 @@ Units are normalized to [0–1] except time.
 
 ### 6.4 Revocation
 
-**Status:** ⚠️ Partial
+**Status:** ✅ Fully Implemented
 
 * Triggered by owner
 * Value remains provable
 * Asset becomes non-exploitable
 
-**Implementation:** Status field supports "revoked" but no explicit `revoke()` method exists.
+**Implementation:** `ValueLedger.revoke()` method with `revoked_at`, `revoked_by`, `revocation_reason` fields, and optional cascade to children.
 
 ---
 
@@ -233,16 +233,16 @@ Suggestions are advisory only.
 
 | Threat    | Mitigation              | Status |
 | --------- | ----------------------- | ------ |
-| Inflation | Owner override + audits | ⚠️ Override only |
+| Inflation | Owner override + audits | ✅ Implemented |
 | Loss      | Append-only logs        | ✅ Implemented |
-| Theft     | Hash-based proofs       | ❌ Not implemented |
-| Coercion  | Offline proofs          | ❌ Not implemented |
+| Theft     | Hash-based proofs       | ✅ Implemented (MerkleTree, content_hash) |
+| Coercion  | Offline proofs          | ✅ Implemented (export_existence_proof) |
 
 ---
 
 ## 12. Proof & Export
 
-**Status:** ❌ Not Implemented
+**Status:** ✅ Fully Implemented
 
 The ledger can export:
 
@@ -252,15 +252,26 @@ The ledger can export:
 
 Exports never include content.
 
+**Implementation:**
+- `export_existence_proof()` - Complete proof with timestamps, Merkle proof, revocation info
+- `get_merkle_proof()` - Returns leaf hash, proof path, and root
+- `verify_entry_proof()` - Verification method
+- CLI: `export` command with JSON/CSV/Merkle formats
+
 ---
 
 ## 13. Failure Modes
 
-**Status:** ❌ Not Implemented
+**Status:** ✅ Fully Implemented
 
 * Clock drift → pause accrual
 * Ambiguous source → deny entry
 * Classification mismatch → freeze
+
+**Implementation:**
+- `ClockMonitor` - Detects clock drift, future timestamps, clock regression
+- `SourceValidator` - Validates entries for integrity, classification compatibility
+- `FailureModeHandler` - Unified handler with `safe_accrue()`, `safe_aggregate()`, health reporting
 
 ---
 
@@ -286,7 +297,7 @@ The Value Ledger exists for when those diverge.
 
 **Source:** [NatLangChain Repository](https://github.com/kase1111-hash/NatLangChain)
 
-**Status:** ⏸️ Designed but not implemented
+**Status:** ✅ Fully Implemented (`value_ledger/natlangchain.py`)
 
 ### 16.1 Overview
 
@@ -324,15 +335,15 @@ NatLangChain uses "Proof of Understanding" where validators paraphrase entries t
 
 ---
 
-## 17. Unimplemented Features & Implementation Plans
+## 17. Feature Implementation Status & Plans
 
-This section documents features specified in the documentation but not yet implemented, along with detailed implementation plans.
+This section documents all features with their implementation status and plans. Features 17.1-17.11 have been fully implemented. Features 17.12-17.15 are pending implementation.
 
 ### 17.1 Proof System (MP-02 Compatibility)
 
 **Source:** specs.md §12, MP-02-spec.md
 
-**Status:** Not implemented
+**Status:** ✅ Implemented (`value_ledger/core.py`)
 
 **Description:** Cryptographic proof generation for third-party verification without content disclosure.
 
@@ -370,7 +381,7 @@ This section documents features specified in the documentation but not yet imple
 
 **Source:** MP-02-spec.md, [NatLangChain Repository](https://github.com/kase1111-hash/NatLangChain)
 
-**Status:** Not implemented
+**Status:** ✅ Implemented (`value_ledger/receipt.py`)
 
 **Description:** Full implementation of the Proof-of-Effort Receipt Protocol for NatLangChain compatibility. MP-02 asserts that effort occurred with traceable provenance, without asserting value, ownership, or compensation.
 
@@ -504,7 +515,7 @@ This section documents features specified in the documentation but not yet imple
 
 **Source:** specs.md §5
 
-**Status:** Not implemented
+**Status:** ✅ Implemented (`value_ledger/core.py`)
 
 **Description:** Track ownership and classification levels (0-5) for entries.
 
@@ -538,7 +549,7 @@ This section documents features specified in the documentation but not yet imple
 
 **Source:** specs.md §5, §6.2
 
-**Status:** Partial (single parent only)
+**Status:** ✅ Implemented (`value_ledger/core.py`)
 
 **Description:** Support aggregating multiple ledger entries with configurable rules.
 
@@ -575,7 +586,7 @@ This section documents features specified in the documentation but not yet imple
 
 **Source:** specs.md §13
 
-**Status:** Not implemented
+**Status:** ✅ Implemented (`value_ledger/core.py`)
 
 **Description:** Handle clock drift, ambiguous sources, and classification mismatches.
 
@@ -620,7 +631,7 @@ This section documents features specified in the documentation but not yet imple
 
 **Source:** INTEGRATION.md §7
 
-**Status:** Not implemented
+**Status:** ✅ Implemented (`value_ledger/synth_mind.py`)
 
 **Description:** Value different cognitive tiers from synth-mind architecture.
 
@@ -659,7 +670,7 @@ This section documents features specified in the documentation but not yet imple
 
 **Source:** INTEGRATION.md §8, [NatLangChain Repository](https://github.com/kase1111-hash/NatLangChain)
 
-**Status:** Not implemented
+**Status:** ✅ Implemented (`value_ledger/natlangchain.py`)
 
 **Description:** Export ledger entries to NatLangChain format for blockchain anchoring. NatLangChain is a prose-first distributed ledger where natural language entries form the immutable substrate.
 
@@ -744,7 +755,7 @@ This section documents features specified in the documentation but not yet imple
 
 **Source:** INTEGRATION.md §5
 
-**Status:** Not implemented
+**Status:** ✅ Implemented (`value_ledger/cli.py`)
 
 **Description:** Administrative commands for ledger management.
 
@@ -790,7 +801,7 @@ This section documents features specified in the documentation but not yet imple
 
 **Source:** specs.md §6.4
 
-**Status:** Partial
+**Status:** ✅ Implemented (`value_ledger/core.py`)
 
 **Description:** Add explicit `revoke()` method with proper handling.
 
@@ -829,7 +840,7 @@ This section documents features specified in the documentation but not yet imple
 
 **Source:** specs.md §4.1
 
-**Status:** Not implemented (R is currently Risk)
+**Status:** ✅ Implemented (`value_ledger/heuristics.py`)
 
 **Description:** Track reusability of heuristics and patterns separately from risk.
 
@@ -1593,3 +1604,4 @@ This section documents features specified in the documentation but not yet imple
 | 0.1.1 | 2024 | Added implementation status and plans |
 | 0.2.0 | 2025-12-19 | Added NatLangChain compatibility section, updated section numbering, verified implementation status against codebase |
 | 0.3.0 | 2025-12-23 | Added unimplemented features from INTEGRATION.md and MP-02-spec.md: Boundary Daemon Integration (17.11), Common Module Integration (17.12), MP-02 Privacy & Agency Controls (17.13), MP-02 External Protocol Compatibility (17.14), Enhanced Validation Criteria (17.15). Added Phase 5 to implementation roadmap. |
+| 0.3.1 | 2025-12-23 | Updated all implementation statuses to reflect actual code state. Features 17.1-17.11 now marked as implemented. Updated sections 5.2, 6.2, 6.4, 11, 12, 13, 16 to show full implementation. |
