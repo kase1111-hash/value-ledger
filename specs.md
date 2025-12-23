@@ -867,7 +867,7 @@ This section documents features specified in the documentation but not yet imple
 
 **Source:** INTEGRATION.md §4
 
-**Status:** Not implemented (passive integration via IntentLog)
+**Status:** ✅ Implemented (`value_ledger/interruption.py`)
 
 **Description:** Direct integration with Boundary Daemon for interruption tracking and context switch detection that affects effort scoring.
 

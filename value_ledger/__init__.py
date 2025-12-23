@@ -48,6 +48,16 @@ from .synth_mind import (
     CognitiveTierScorer,
     SynthMindHook,
 )
+from .interruption import (
+    InterruptionType,
+    InterruptionEvent,
+    InterruptionSummary,
+    InterruptionTracker,
+    BoundaryDaemonListener,
+    MockBoundaryEmitter,
+    calculate_effort_factor,
+    create_boundary_daemon_hook,
+)
 
 __version__ = "0.3.0"
 
@@ -94,4 +104,13 @@ __all__ = [
     "CognitiveTierContext",
     "CognitiveTierScorer",
     "SynthMindHook",
+    # Boundary Daemon integration
+    "InterruptionType",
+    "InterruptionEvent",
+    "InterruptionSummary",
+    "InterruptionTracker",
+    "BoundaryDaemonListener",
+    "MockBoundaryEmitter",
+    "calculate_effort_factor",
+    "create_boundary_daemon_hook",
 ]
