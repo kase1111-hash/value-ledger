@@ -24,20 +24,27 @@ This module is part of a larger 9-module system building Agent-OS, a natural-lan
 
 | Document | Description |
 |----------|-------------|
-| [specs.md](specs.md) | Core specification: design principles, value units, ledger schema, operations, and threat model |
-| [INTEGRATION.md](INTEGRATION.md) | Cross-repository integration guide with all 9 Agent-OS modules |
-| [MP-02-spec.md](MP-02-spec.md) | Proof-of-Effort Receipt Protocol for NatLangChain compatibility |
+| [Installation](docs/installation.md) | Setup and installation instructions |
+| [User Manual](docs/user-manual.md) | CLI commands and Python API usage |
+| [Specs Sheet](docs/specs-sheet.md) | Complete specification: design principles, value units, ledger schema, operations, integrations, and MP-02 protocol |
+| [Contributing](docs/contributing.md) | Guidelines for contributors |
+| [Code of Conduct](docs/code-of-conduct.md) | Community standards |
 
 ## Current Status
 
-This repository currently contains:
+**Version 0.3.1** - Core implementation complete.
 
-- Core specification ([specs.md](specs.md))
-- Cross-repository integration guide ([INTEGRATION.md](INTEGRATION.md))
-- Protocol specification ([MP-02-spec.md](MP-02-spec.md))
-- GPL-3.0 license
-
-Implementation in progress — Core code, storage backend, and module integrations are under development (Python, consistent with the ecosystem).
+Implemented features:
+- 7-dimensional value vector (T/E/N/F/R/S/U)
+- Proof system with Merkle trees
+- Multi-parent aggregation
+- Failure mode handling
+- Admin CLI (query, export, stats, revoke)
+- IntentLog integration
+- Boundary Daemon integration
+- Synth-Mind integration
+- NatLangChain export
+- MP-02 Effort Receipts
 
 ## Quick Start (Development)
 
