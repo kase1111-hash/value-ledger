@@ -4,12 +4,6 @@ Thank you for your interest in contributing to Value Ledger! This document provi
 
 ## Getting Started
 
-### Prerequisites
-
-- Python 3.9 or higher
-- Git
-- pip
-
 ### Development Setup
 
 1. Fork the repository
@@ -19,15 +13,9 @@ Thank you for your interest in contributing to Value Ledger! This document provi
    cd value-ledger
    ```
 
-3. Install development dependencies:
-   ```bash
-   pip install -e ".[dev]"
-   ```
-
-4. Verify setup:
-   ```bash
-   pytest tests/
-   ```
+3. Follow the [Installation instructions](../README.md#installation) in the README
+4. Install with dev dependencies: `pip install -e ".[dev]"`
+5. Verify setup: `pytest tests/`
 
 ## Development Workflow
 

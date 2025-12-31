@@ -24,7 +24,6 @@ This module is part of a larger 9-module system building Agent-OS, a natural-lan
 
 | Document | Description |
 |----------|-------------|
-| [Installation](docs/installation.md) | Setup and installation instructions |
 | [User Manual](docs/user-manual.md) | CLI commands and Python API usage |
 | [Specs Sheet](docs/specs-sheet.md) | Complete specification: design principles, value units, ledger schema, operations, integrations, and MP-02 protocol |
 | [Contributing](docs/contributing.md) | Guidelines for contributors |
@@ -50,12 +49,63 @@ Implemented features:
 - Enhanced Validation Criteria (coherence, progression, consistency, authenticity, completeness)
 - Security hardening (SSRF protection, path traversal prevention)
 
-## Quick Start (Development)
+## Installation
+
+### Requirements
+
+- Python >= 3.9
+- pip (Python package manager)
+
+### Dependencies
+
+- `pydantic>=2.0` - Data validation
+- `cryptography>=41.0` - Cryptographic operations
+
+### From Source (Development)
 
 ```bash
+# Clone the repository
+git clone https://github.com/kase1111-hash/value-ledger.git
+cd value-ledger
+
+# Install in editable mode
 pip install -e .
-python -m value_ledger.cli
+
+# Verify installation
+python -m value_ledger.cli --help
 ```
+
+### With Development Dependencies
+
+For development and testing:
+
+```bash
+pip install -e ".[dev]"
+```
+
+This includes: `pytest`, `black`, `ruff`
+
+### Storage Configuration
+
+The ledger uses JSONL (JSON Lines) format. Default path: `ledger.jsonl`
+
+When integrated with Agent-OS: `~/.agent-os/ledger.jsonl`
+
+### Verifying Installation
+
+```bash
+# Run the CLI demo
+python -m value_ledger.cli demo
+
+# Run tests
+pytest tests/
+```
+
+### Troubleshooting
+
+**Import Errors:** Ensure pydantic is installed: `pip install pydantic>=2.0`
+
+**Permission Issues:** Ensure write permissions: `chmod 755 ~/.agent-os/`
 
 ## License
 

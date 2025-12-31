@@ -540,7 +540,7 @@ Past receipts remain immutable.
 
 # Part 4: Implementation Status
 
-## Completed Features (v0.3.1)
+## Implemented Features (v0.5.0)
 
 | Feature | Module | Status |
 |---------|--------|--------|
@@ -557,13 +557,14 @@ Past receipts remain immutable.
 | Boundary Daemon Integration | `interruption.py` | ✅ Implemented |
 | MP-02 Privacy & Agency Controls | `privacy.py` | ✅ Implemented |
 | MP-02 External Compatibility | `compatibility.py` | ✅ Implemented |
+| Enhanced Validation Criteria | `validation.py` | ✅ Implemented |
+| Security Hardening (SSRF, Path Traversal) | `core.py` | ✅ Implemented |
 
 ## Pending Features
 
 | Feature | Priority | Status |
 |---------|----------|--------|
 | Common Module Integration | Low | Awaiting common module |
-| Enhanced Validation Criteria | Low | ✅ Implemented |
 
 ---
 
@@ -572,10 +573,7 @@ Past receipts remain immutable.
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1.0 | 2024 | Initial specification |
-| 0.1.1 | 2024 | Added implementation status and plans |
-| 0.2.0 | 2025-12-19 | Added NatLangChain compatibility section |
-| 0.3.0 | 2025-12-23 | Added Boundary Daemon, Common Module, MP-02 Privacy, External Compatibility, Enhanced Validation |
-| 0.3.1 | 2025-12-23 | Updated all implementation statuses to reflect actual code state |
-| 0.4.0 | 2025-12-23 | Implemented MP-02 Privacy & Agency Controls (consent, encryption, filtering)
-| 0.5.0 | 2025-12-23 | Implemented MP-02 External Compatibility (MP-01, licensing, audit formats)
-| 0.6.0 | 2025-12-23 | Implemented Enhanced Validation Criteria (MP-02 §7 compliance)
+| 0.2.0 | 2024 | Added NatLangChain compatibility |
+| 0.3.0 | 2024 | Added Boundary Daemon integration, MP-02 Privacy & Agency Controls |
+| 0.4.0 | 2024 | Added MP-02 External Compatibility (MP-01, licensing, audit formats) |
+| 0.5.0 | 2024 | Added Enhanced Validation Criteria, security hardening, consolidated spec docs |
