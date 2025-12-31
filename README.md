@@ -32,7 +32,7 @@ This module is part of a larger 9-module system building Agent-OS, a natural-lan
 
 ## Current Status
 
-**Version 0.3.1** - Core implementation complete.
+**Version 0.5.0** - Core implementation complete with advanced features.
 
 Implemented features:
 - 7-dimensional value vector (T/E/N/F/R/S/U)
@@ -45,6 +45,10 @@ Implemented features:
 - Synth-Mind integration
 - NatLangChain export
 - MP-02 Effort Receipts
+- MP-02 Privacy & Agency Controls
+- MP-02 External Compatibility (license management, audit export)
+- Enhanced Validation Criteria (coherence, progression, consistency, authenticity, completeness)
+- Security hardening (SSRF protection, path traversal prevention)
 
 ## Quick Start (Development)
 
