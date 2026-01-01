@@ -1,6 +1,6 @@
 [project]
 name = "value-ledger"
-version = "0.5.0"
+version = "0.1.0a1"
 description = "Evidentiary accounting layer for cognitive effort in Agent-OS"
 authors = [{name = "kase1111-hash"}]
 license = {text = "GPL-3.0-only"}

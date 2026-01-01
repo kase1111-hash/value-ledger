@@ -109,8 +109,40 @@ from .validation import (
     create_enhanced_validator,
     validate_segment,
 )
+from .security import (
+    # Exceptions
+    ValueLedgerError,
+    ValidationError,
+    StorageError,
+    CryptographyError,
+    IntegrationError,
+    SecurityError,
+    ConnectionProtectionError,
+    RateLimitError,
+    # Event types
+    SecurityEventSeverity,
+    SecurityEventType,
+    SecurityEvent,
+    # SIEM integration
+    SIEMConfig,
+    BoundarySIEMClient,
+    # Daemon integration
+    BoundaryMode,
+    PolicyDecision,
+    BoundaryDaemonConfig,
+    BoundaryDaemonClient,
+    # Security manager
+    SecurityManager,
+    # Decorators and utilities
+    protected_operation,
+    security_context,
+    init_security,
+    report_event,
+    check_connection,
+    check_file_access,
+)
 
-__version__ = "0.5.0"
+__version__ = "0.1.0a1"
 
 __all__ = [
     # Core classes
@@ -212,4 +244,29 @@ __all__ = [
     "ConfidenceCalculator",
     "create_enhanced_validator",
     "validate_segment",
+    # Security & Error Handling
+    "ValueLedgerError",
+    "ValidationError",
+    "StorageError",
+    "CryptographyError",
+    "IntegrationError",
+    "SecurityError",
+    "ConnectionProtectionError",
+    "RateLimitError",
+    "SecurityEventSeverity",
+    "SecurityEventType",
+    "SecurityEvent",
+    "SIEMConfig",
+    "BoundarySIEMClient",
+    "BoundaryMode",
+    "PolicyDecision",
+    "BoundaryDaemonConfig",
+    "BoundaryDaemonClient",
+    "SecurityManager",
+    "protected_operation",
+    "security_context",
+    "init_security",
+    "report_event",
+    "check_connection",
+    "check_file_access",
 ]
