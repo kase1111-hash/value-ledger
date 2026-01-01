@@ -291,7 +291,6 @@ The Agent-OS ecosystem consists of 9 modules:
 | Learning Contracts | ⚠️ Stubbed | Consent checking |
 | Boundary Daemon | ✅ Implemented | `interruption.py` |
 | Agent-OS Core | ✅ Ready | Factory functions |
-| Common Module | ⚠️ Stubbed | Local implementations |
 | Synth-Mind | ✅ Implemented | `synth_mind.py` |
 | NatLangChain | ✅ Implemented | `natlangchain.py` |
 
@@ -559,12 +558,6 @@ Past receipts remain immutable.
 | MP-02 External Compatibility | `compatibility.py` |
 | Enhanced Validation Criteria | `validation.py` |
 | Security Hardening (SSRF, path traversal) | `core.py` |
-
-## Pending Features
-
-| Feature | Priority | Notes |
-|---------|----------|-------|
-| Common Module Integration | Low | Awaiting common module |
 
 ---
 
