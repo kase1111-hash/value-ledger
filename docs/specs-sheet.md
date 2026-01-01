@@ -539,34 +539,34 @@ Past receipts remain immutable.
 
 # Part 4: Implementation Status
 
-## Implemented Features
+## Implemented Features (v0.5.0)
 
-| Feature | Module |
-|---------|--------|
-| Proof System | `core.py` |
-| Effort Receipt Protocol | `receipt.py` |
-| Owner & Classification | `core.py` |
-| Multi-Parent Aggregation | `core.py` |
-| Failure Mode Handling | `core.py` |
-| Synth-Mind Integration | `synth_mind.py` |
-| NatLangChain Export | `natlangchain.py` |
-| Admin CLI | `cli.py` |
-| Explicit Revocation | `core.py` |
-| Reusability Metric | `heuristics.py` |
-| Boundary Daemon Integration | `interruption.py` |
-| MP-02 Privacy & Agency Controls | `privacy.py` |
-| MP-02 External Compatibility | `compatibility.py` |
-| Enhanced Validation Criteria | `validation.py` |
-| Security Hardening (SSRF, path traversal) | `core.py` |
+| Feature | Module | Status |
+|---------|--------|--------|
+| Proof System | `core.py` | ✅ Implemented |
+| Effort Receipt Protocol | `receipt.py` | ✅ Implemented |
+| Owner & Classification | `core.py` | ✅ Implemented |
+| Multi-Parent Aggregation | `core.py` | ✅ Implemented |
+| Failure Mode Handling | `core.py` | ✅ Implemented |
+| Synth-Mind Integration | `synth_mind.py` | ✅ Implemented |
+| NatLangChain Export | `natlangchain.py` | ✅ Implemented |
+| Admin CLI | `cli.py` | ✅ Implemented |
+| Explicit Revocation | `core.py` | ✅ Implemented |
+| Reusability Metric | `heuristics.py` | ✅ Implemented |
+| Boundary Daemon Integration | `interruption.py` | ✅ Implemented |
+| MP-02 Privacy & Agency Controls | `privacy.py` | ✅ Implemented |
+| MP-02 External Compatibility | `compatibility.py` | ✅ Implemented |
+| Enhanced Validation Criteria | `validation.py` | ✅ Implemented |
+| Security Hardening (SSRF, Path Traversal) | `core.py` | ✅ Implemented |
 
 ---
 
 ## Version History
 
-| Version | Changes |
-|---------|---------|
-| 0.1.0 | Initial specification |
-| 0.2.0 | Added NatLangChain compatibility |
-| 0.3.0 | Boundary Daemon, MP-02 Privacy, External Compatibility |
-| 0.4.0 | MP-02 Privacy & Agency Controls |
-| 0.5.0 | MP-02 External Compatibility, Enhanced Validation, Security hardening |
+| Version | Date | Changes |
+|---------|------|---------|
+| 0.1.0 | 2024 | Initial specification |
+| 0.2.0 | 2024 | Added NatLangChain compatibility |
+| 0.3.0 | 2024 | Added Boundary Daemon integration, MP-02 Privacy & Agency Controls |
+| 0.4.0 | 2024 | Added MP-02 External Compatibility (MP-01, licensing, audit formats) |
+| 0.5.0 | 2024 | Added Enhanced Validation Criteria, security hardening, consolidated spec docs |
