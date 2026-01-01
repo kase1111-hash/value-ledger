@@ -43,6 +43,7 @@ from value_ledger.receipt import (
 # Test Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def base_time():
     """Fixed base time for deterministic tests."""
@@ -54,13 +55,15 @@ def sample_signals(base_time):
     """Create a list of sample signals with natural variance."""
     signals = []
     for i in range(5):
-        signals.append(EffortSignal(
-            signal_type=SignalType.TEXT if i % 2 == 0 else SignalType.KEYSTROKE,
-            timestamp=base_time + i * 60 + (i * 7 % 10),  # Natural variance
-            hash=hashlib.sha256(f"content_{i}".encode()).hexdigest(),
-            modality="keyboard" if i % 2 == 0 else "mouse",
-            sequence_number=i,
-        ))
+        signals.append(
+            EffortSignal(
+                signal_type=SignalType.TEXT if i % 2 == 0 else SignalType.KEYSTROKE,
+                timestamp=base_time + i * 60 + (i * 7 % 10),  # Natural variance
+                hash=hashlib.sha256(f"content_{i}".encode()).hexdigest(),
+                modality="keyboard" if i % 2 == 0 else "mouse",
+                sequence_number=i,
+            )
+        )
     return signals
 
 
@@ -91,13 +94,15 @@ def synthetic_segment(base_time):
     """Create a segment with perfectly regular timing (synthetic pattern)."""
     signals = []
     for i in range(10):
-        signals.append(EffortSignal(
-            signal_type=SignalType.TEXT,
-            timestamp=base_time + i * 10.0,  # Perfectly regular
-            hash=hashlib.sha256(f"synthetic_{i}".encode()).hexdigest(),
-            modality="keyboard",
-            sequence_number=i,
-        ))
+        signals.append(
+            EffortSignal(
+                signal_type=SignalType.TEXT,
+                timestamp=base_time + i * 10.0,  # Perfectly regular
+                hash=hashlib.sha256(f"synthetic_{i}".encode()).hexdigest(),
+                modality="keyboard",
+                sequence_number=i,
+            )
+        )
     return EffortSegment(
         segment_id="synthetic-segment",
         start_time=base_time,
@@ -112,13 +117,15 @@ def duplicate_segment(base_time):
     same_hash = hashlib.sha256("duplicate_content".encode()).hexdigest()
     signals = []
     for i in range(5):
-        signals.append(EffortSignal(
-            signal_type=SignalType.TEXT,
-            timestamp=base_time + i * 20,
-            hash=same_hash,  # All same hash
-            modality="keyboard",
-            sequence_number=i,
-        ))
+        signals.append(
+            EffortSignal(
+                signal_type=SignalType.TEXT,
+                timestamp=base_time + i * 20,
+                hash=same_hash,  # All same hash
+                modality="keyboard",
+                sequence_number=i,
+            )
+        )
     return EffortSegment(
         segment_id="duplicate-segment",
         start_time=base_time,
@@ -154,6 +161,7 @@ def custom_config():
 # Tests: CriteriaType Enum
 # =============================================================================
 
+
 class TestCriteriaType:
     """Tests for CriteriaType enumeration."""
 
@@ -181,6 +189,7 @@ class TestSeverityLevel:
 # =============================================================================
 # Tests: ValidationCriterion
 # =============================================================================
+
 
 class TestValidationCriterion:
     """Tests for ValidationCriterion dataclass."""
@@ -214,6 +223,7 @@ class TestValidationCriterion:
 # =============================================================================
 # Tests: ValidationIssue
 # =============================================================================
+
 
 class TestValidationIssue:
     """Tests for ValidationIssue dataclass."""
@@ -249,6 +259,7 @@ class TestValidationIssue:
 # Tests: CriteriaConfig
 # =============================================================================
 
+
 class TestCriteriaConfig:
     """Tests for CriteriaConfig dataclass."""
 
@@ -275,6 +286,7 @@ class TestCriteriaConfig:
 # =============================================================================
 # Tests: Score Dataclasses
 # =============================================================================
+
 
 class TestScoreDataclasses:
     """Tests for score dataclasses."""
@@ -314,6 +326,7 @@ class TestScoreDataclasses:
 # =============================================================================
 # Tests: ValidationReport
 # =============================================================================
+
 
 class TestValidationReport:
     """Tests for ValidationReport dataclass."""
@@ -370,6 +383,7 @@ class TestValidationReport:
 # =============================================================================
 # Tests: EnhancedValidator
 # =============================================================================
+
 
 class TestEnhancedValidator:
     """Tests for EnhancedValidator class."""
@@ -538,6 +552,7 @@ class TestValidityDetermination:
 # Tests: ConsistencyChecker
 # =============================================================================
 
+
 class TestConsistencyChecker:
     """Tests for ConsistencyChecker class."""
 
@@ -564,7 +579,7 @@ class TestConsistencyChecker:
                 timestamp=time.time() + 3600,
                 hash="future",
                 modality="keyboard",
-            )
+            ),
         ]
         is_consistent, issues = checker.check_temporal_consistency(future_signals)
         assert is_consistent is False
@@ -597,6 +612,7 @@ class TestConsistencyChecker:
 # =============================================================================
 # Tests: DuplicationDetector
 # =============================================================================
+
 
 class TestDuplicationDetector:
     """Tests for DuplicationDetector class."""
@@ -641,6 +657,7 @@ class TestDuplicationDetector:
 # Tests: ConfidenceCalculator
 # =============================================================================
 
+
 class TestConfidenceCalculator:
     """Tests for ConfidenceCalculator class."""
 
@@ -670,12 +687,14 @@ class TestConfidenceCalculator:
 
     def test_calculate_with_custom_weights(self):
         """Test with custom weights."""
-        calculator = ConfidenceCalculator(weights={
-            "signal_count": 0.5,
-            "duration": 0.5,
-            "consistency": 0.0,
-            "authenticity": 0.0,
-        })
+        calculator = ConfidenceCalculator(
+            weights={
+                "signal_count": 0.5,
+                "duration": 0.5,
+                "consistency": 0.0,
+                "authenticity": 0.0,
+            }
+        )
         confidence = calculator.calculate(
             signal_count=10,
             duration=300.0,
@@ -688,6 +707,7 @@ class TestConfidenceCalculator:
 # =============================================================================
 # Tests: Convenience Functions
 # =============================================================================
+
 
 class TestConvenienceFunctions:
     """Tests for convenience functions."""
@@ -721,6 +741,7 @@ class TestConvenienceFunctions:
 # =============================================================================
 # Tests: MP-02 Spec Compliance
 # =============================================================================
+
 
 class TestMP02Compliance:
     """Tests for MP-02 specification compliance."""
@@ -772,6 +793,7 @@ class TestMP02Compliance:
 # =============================================================================
 # Tests: Edge Cases
 # =============================================================================
+
 
 class TestEdgeCases:
     """Tests for edge cases and error handling."""

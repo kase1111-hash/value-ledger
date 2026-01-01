@@ -32,8 +32,10 @@ logger = logging.getLogger(__name__)
 # MP-01 Negotiation & Ratification Protocol Compatibility
 # =============================================================================
 
+
 class NegotiationStatus(str, Enum):
     """Status of MP-01 negotiation."""
+
     PROPOSED = "proposed"
     COUNTER_OFFERED = "counter_offered"
     ACCEPTED = "accepted"
@@ -44,6 +46,7 @@ class NegotiationStatus(str, Enum):
 
 class RatificationMethod(str, Enum):
     """Method of ratification per MP-01."""
+
     SIGNATURE = "signature"
     CONSENSUS = "consensus"
     THRESHOLD = "threshold"
@@ -58,6 +61,7 @@ class MP01Proposal:
     MP-01 defines how effort receipts can be used in negotiation
     and licensing workflows.
     """
+
     proposal_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     receipt_ids: List[str] = field(default_factory=list)  # Referenced receipts
     proposer_id: str = ""
@@ -120,6 +124,7 @@ class MP01Ratification:
     """
     A ratification record for MP-01 proposals.
     """
+
     ratification_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     proposal_id: str = ""
     proposal_hash: str = ""
@@ -184,7 +189,9 @@ class MP01Formatter:
         if expires_in_seconds:
             proposal.expires_at = time.time() + expires_in_seconds
 
-        logger.info(f"Created MP-01 proposal {proposal.proposal_id} with {len(receipt_ids)} receipts")
+        logger.info(
+            f"Created MP-01 proposal {proposal.proposal_id} with {len(receipt_ids)} receipts"
+        )
         return proposal
 
     def format_for_negotiation(self, receipt: "EffortReceipt") -> Dict[str, Any]:
@@ -285,8 +292,10 @@ class MP01Formatter:
 # Licensing and Delegation Module Compatibility
 # =============================================================================
 
+
 class LicenseType(str, Enum):
     """Types of licenses that can be attached to receipts."""
+
     NONE = "none"
     VIEW_ONLY = "view_only"
     REFERENCE = "reference"
@@ -302,6 +311,7 @@ class LicenseReference:
 
     Supports both standard licenses and custom terms.
     """
+
     license_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     license_type: str = LicenseType.NONE
     receipt_ids: List[str] = field(default_factory=list)
@@ -369,6 +379,7 @@ class LicenseReference:
 @dataclass
 class DelegationRecord:
     """Record of license delegation."""
+
     delegation_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     license_id: str = ""
     delegator_id: str = ""
@@ -492,7 +503,9 @@ class LicenseManager:
             existing_delegations = self._delegations.get(license_id, [])
             delegator_found = any(d.delegatee_id == delegator_id for d in existing_delegations)
             if not delegator_found:
-                logger.warning(f"Party {delegator_id} not authorized to delegate license {license_id}")
+                logger.warning(
+                    f"Party {delegator_id} not authorized to delegate license {license_id}"
+                )
                 return None
 
         # Calculate delegation depth
@@ -558,18 +571,17 @@ class LicenseManager:
 
     def list_licenses_for_receipt(self, receipt_id: str) -> List[LicenseReference]:
         """List all licenses covering a receipt."""
-        return [
-            lic for lic in self._licenses.values()
-            if receipt_id in lic.receipt_ids
-        ]
+        return [lic for lic in self._licenses.values() if receipt_id in lic.receipt_ids]
 
 
 # =============================================================================
 # External Audit System Compatibility
 # =============================================================================
 
+
 class AuditFormat(str, Enum):
     """Supported external audit formats."""
+
     JSON_LD = "json_ld"  # Linked Data format
     W3C_VC = "w3c_vc"  # W3C Verifiable Credentials-style
     OPEN_TIMESTAMPS = "open_timestamps"  # OpenTimestamps-compatible
@@ -582,6 +594,7 @@ class AuditEntry:
     """
     A standardized audit entry compatible with external systems.
     """
+
     entry_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: float = field(default_factory=time.time)
     event_type: str = ""
@@ -696,7 +709,9 @@ class AuditExporter:
             "type": ["VerifiableCredential", "EffortReceiptCredential"],
             "id": f"urn:uuid:{receipt.receipt_id}",
             "issuer": self.issuer_id,
-            "issuanceDate": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(receipt.time_bounds[0])),
+            "issuanceDate": time.strftime(
+                "%Y-%m-%dT%H:%M:%SZ", time.gmtime(receipt.time_bounds[0])
+            ),
             "credentialSubject": {
                 "id": f"urn:mp02:effort:{receipt.receipt_id}",
                 "type": "EffortAssertion",
@@ -826,6 +841,7 @@ class AuditExporter:
 # Cross-Protocol Adapter
 # =============================================================================
 
+
 class ProtocolAdapter:
     """
     Adapter for cross-protocol interoperability.
@@ -926,6 +942,7 @@ class ProtocolAdapter:
 # =============================================================================
 # Convenience Functions
 # =============================================================================
+
 
 def create_protocol_adapter(
     party_id: str = "",

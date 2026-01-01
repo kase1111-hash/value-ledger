@@ -11,16 +11,15 @@ import json
 import time
 import hashlib
 import logging
-from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Dict, List, Optional, Any, TYPE_CHECKING
-from pydantic import BaseModel, Field, field_validator, model_validator
-import os
+from pydantic import BaseModel, Field, model_validator
 
 if TYPE_CHECKING:
     from .heuristics import ScoringContext
 
 logger = logging.getLogger(__name__)
+
 
 # Placeholder for future imports from common utils
 def generate_entry_id(data: str) -> str:
@@ -52,9 +51,16 @@ def _validate_ledger_path(path: str | Path) -> Path:
 
     # Block sensitive system paths
     sensitive_patterns = [
-        "/etc/", "/proc/", "/sys/", "/dev/",
-        "/.ssh/", "/.aws/", "/.config/",
-        "/passwd", "/shadow", "/id_rsa",
+        "/etc/",
+        "/proc/",
+        "/sys/",
+        "/dev/",
+        "/.ssh/",
+        "/.aws/",
+        "/.config/",
+        "/passwd",
+        "/shadow",
+        "/id_rsa",
     ]
     resolved_str = str(resolved).lower()
     for pattern in sensitive_patterns:
@@ -164,6 +170,7 @@ class MerkleTree:
 
 class ValueVector(BaseModel):
     """The seven value units: T/E/N/F/R/S/U"""
+
     t: float = Field(default=0.0, ge=0.0, description="Time spent")
     e: float = Field(default=0.0, ge=0.0, description="Effort (interruption-adjusted)")
     n: float = Field(default=0.0, ge=0.0, description="Novelty")
@@ -192,6 +199,7 @@ class ValueVector(BaseModel):
 
 class ProofData(BaseModel):
     """Cryptographic proof fields for third-party verification (MP-02 compatible)."""
+
     content_hash: Optional[str] = None  # SHA-256 hash of source content
     timestamp_proof: Optional[str] = None  # Signed timestamp or anchor reference
     merkle_ref: Optional[str] = None  # Reference to Merkle tree position
@@ -225,7 +233,7 @@ class LedgerEntry(BaseModel):
     parent_ids: List[str] = Field(default_factory=list)  # Multiple parent entries
     aggregation_rule: Optional[str] = None  # sum | max | weighted
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def ensure_id(self):
         if not self.id:
             # Fallback deterministic ID generation
@@ -233,7 +241,7 @@ class LedgerEntry(BaseModel):
             self.id = generate_entry_id(data)
         return self
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def sync_parent_fields(self):
         """Ensure parent_id and parent_ids are in sync."""
         if self.parent_id and self.parent_id not in self.parent_ids:
@@ -319,6 +327,7 @@ class ValueLedger:
             },
             content_for_proof=ctx.memory_content,  # Use memory content for proof hash
         )
+
     def accrue(
         self,
         intent_id: str,
@@ -331,7 +340,9 @@ class ValueLedger:
         contract_id: Optional[str] = None,
     ) -> str:
         """Accrue new value - primary entry point"""
-        vector = ValueVector(**{k: v for k, v in initial_vector.items() if k in ValueVector.model_fields})
+        vector = ValueVector(
+            **{k: v for k, v in initial_vector.items() if k in ValueVector.model_fields}
+        )
 
         # Validate classification (Phase 2 - 17.3)
         if classification < 0 or classification > 5:
@@ -525,12 +536,16 @@ class ValueLedger:
                 "merkle_ref": entry.proof.merkle_ref,
                 "merkle_proof": merkle_proof,
             },
-            "revocation": {
-                "revoked": entry.status == "revoked",
-                "revoked_at": entry.revoked_at,
-                "revoked_by": entry.revoked_by,
-                "reason": entry.revocation_reason,
-            } if entry.status == "revoked" else None,
+            "revocation": (
+                {
+                    "revoked": entry.status == "revoked",
+                    "revoked_at": entry.revoked_at,
+                    "revoked_by": entry.revoked_by,
+                    "reason": entry.revocation_reason,
+                }
+                if entry.status == "revoked"
+                else None
+            ),
         }
 
     # === Phase 2 - 17.3: Owner & Classification Access Control ===
@@ -740,7 +755,9 @@ class ValueLedger:
 
         # Use intent_id from first parent (or create combined)
         intent_ids = list(set(p.intent_id for p in parents))
-        combined_intent = intent_ids[0] if len(intent_ids) == 1 else f"aggregated:{','.join(intent_ids[:3])}"
+        combined_intent = (
+            intent_ids[0] if len(intent_ids) == 1 else f"aggregated:{','.join(intent_ids[:3])}"
+        )
 
         # Create aggregated entry
         entry = LedgerEntry(
@@ -799,6 +816,7 @@ class ValueLedger:
 
 # === Phase 2 - 17.5: Failure Mode Handling ===
 
+
 class ClockMonitor:
     """
     Monitor for clock drift and suspicious timestamps.
@@ -808,7 +826,7 @@ class ClockMonitor:
     def __init__(
         self,
         max_drift_seconds: float = 300.0,  # 5 minutes
-        max_future_seconds: float = 60.0,   # 1 minute into future
+        max_future_seconds: float = 60.0,  # 1 minute into future
     ):
         self.max_drift = max_drift_seconds
         self.max_future = max_future_seconds
@@ -828,33 +846,39 @@ class ClockMonitor:
 
         # Check for future timestamps
         if timestamp > current + self.max_future:
-            issues.append({
-                "type": "future_timestamp",
-                "delta": timestamp - current,
-                "severity": "high",
-            })
+            issues.append(
+                {
+                    "type": "future_timestamp",
+                    "delta": timestamp - current,
+                    "severity": "high",
+                }
+            )
             adjusted = current  # Use current time instead
 
         # Check for extreme past (clock jumped back)
         if self.last_known_time and timestamp < self.last_known_time - self.max_drift:
-            issues.append({
-                "type": "clock_regression",
-                "expected_min": self.last_known_time,
-                "actual": timestamp,
-                "severity": "medium",
-            })
+            issues.append(
+                {
+                    "type": "clock_regression",
+                    "expected_min": self.last_known_time,
+                    "actual": timestamp,
+                    "severity": "medium",
+                }
+            )
 
         # Check for unrealistic duration (clock skew)
         if self.last_known_time:
             expected_delta = current - self.last_known_time
             actual_delta = timestamp - self.last_known_time
             if abs(expected_delta - actual_delta) > self.max_drift:
-                issues.append({
-                    "type": "clock_skew",
-                    "expected_delta": expected_delta,
-                    "actual_delta": actual_delta,
-                    "severity": "low",
-                })
+                issues.append(
+                    {
+                        "type": "clock_skew",
+                        "expected_delta": expected_delta,
+                        "actual_delta": actual_delta,
+                        "severity": "low",
+                    }
+                )
 
         # Update last known time
         self.last_known_time = current
@@ -913,31 +937,39 @@ class SourceValidator:
         vec = entry.value_vector.dict()
         for k, v in vec.items():
             if v < 0:
-                errors.append({
-                    "field": f"value_vector.{k}",
-                    "error": f"Negative value: {v}",
-                })
+                errors.append(
+                    {
+                        "field": f"value_vector.{k}",
+                        "error": f"Negative value: {v}",
+                    }
+                )
 
         # Check classification bounds
         if entry.classification < 0 or entry.classification > 5:
-            errors.append({
-                "field": "classification",
-                "error": f"Invalid classification: {entry.classification}",
-            })
+            errors.append(
+                {
+                    "field": "classification",
+                    "error": f"Invalid classification: {entry.classification}",
+                }
+            )
 
         # Check for orphaned parent references
         if entry.parent_id and not entry.parent_ids:
-            warnings.append({
-                "field": "parent_ids",
-                "warning": "parent_id set but parent_ids empty",
-            })
+            warnings.append(
+                {
+                    "field": "parent_ids",
+                    "warning": "parent_id set but parent_ids empty",
+                }
+            )
 
         # Check revocation consistency
         if entry.status == "revoked" and not entry.revoked_at:
-            warnings.append({
-                "field": "revoked_at",
-                "warning": "Entry marked revoked but no revocation timestamp",
-            })
+            warnings.append(
+                {
+                    "field": "revoked_at",
+                    "warning": "Entry marked revoked but no revocation timestamp",
+                }
+            )
 
         result = {
             "valid": len(errors) == 0,
@@ -969,31 +1001,37 @@ class SourceValidator:
             # Check individual entry validity
             entry_result = self.validate_entry(entry)
             if not entry_result["valid"]:
-                errors.append({
-                    "entry_id": entry.id,
-                    "type": "invalid_entry",
-                    "details": entry_result["errors"],
-                })
+                errors.append(
+                    {
+                        "entry_id": entry.id,
+                        "type": "invalid_entry",
+                        "details": entry_result["errors"],
+                    }
+                )
 
             # Track max classification
             max_classification = max(max_classification, entry.classification)
 
             # Check status
             if entry.status == "revoked":
-                errors.append({
-                    "entry_id": entry.id,
-                    "type": "revoked_entry",
-                    "error": "Cannot aggregate revoked entries",
-                })
+                errors.append(
+                    {
+                        "entry_id": entry.id,
+                        "type": "revoked_entry",
+                        "error": "Cannot aggregate revoked entries",
+                    }
+                )
 
         # Check requester has sufficient clearance
         if requester_clearance < max_classification:
-            errors.append({
-                "type": "insufficient_clearance",
-                "required": max_classification,
-                "actual": requester_clearance,
-                "error": f"Requester clearance {requester_clearance} < required {max_classification}",
-            })
+            errors.append(
+                {
+                    "type": "insufficient_clearance",
+                    "required": max_classification,
+                    "actual": requester_clearance,
+                    "error": f"Requester clearance {requester_clearance} < required {max_classification}",
+                }
+            )
 
         return {
             "valid": len(errors) == 0,
@@ -1185,7 +1223,11 @@ class FailureModeHandler:
             },
             "failure_count": len(self.failure_log),
             "recent_failures": self.failure_log[-5:] if self.failure_log else [],
-            "overall_status": "healthy" if not (clock_issues or validation_issues or self.failure_log) else "degraded",
+            "overall_status": (
+                "healthy"
+                if not (clock_issues or validation_issues or self.failure_log)
+                else "degraded"
+            ),
             "checked_at": time.time(),
         }
 

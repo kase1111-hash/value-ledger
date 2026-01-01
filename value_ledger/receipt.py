@@ -26,6 +26,7 @@ import json
 
 class SignalType(str, Enum):
     """Types of effort signals that can be observed."""
+
     VOICE = "voice"
     TEXT = "text"
     COMMAND = "command"
@@ -37,6 +38,7 @@ class SignalType(str, Enum):
 
 class CaptureMode(str, Enum):
     """How signals are captured by observers."""
+
     CONTINUOUS = "continuous"
     INTERMITTENT = "intermittent"
     ON_DEMAND = "on_demand"
@@ -56,6 +58,7 @@ class EffortSignal:
     - Alter raw signals
     - Infer intent beyond observed data
     """
+
     signal_type: str  # SignalType value
     timestamp: float
     hash: str  # SHA-256 hash of signal content
@@ -91,6 +94,7 @@ class EffortSegment:
     Segments provide temporal boundaries for validation.
     Segmentation rules must be deterministic and disclosed.
     """
+
     segment_id: str
     start_time: float
     end_time: float
@@ -139,6 +143,7 @@ class ValidationMetadata:
     - Assert originality or ownership
     - Collapse ambiguous signals into certainty
     """
+
     validator_id: str
     model_id: str
     model_version: str
@@ -158,6 +163,7 @@ class EffortReceipt:
     The receipt asserts that effort occurred with traceable provenance.
     It does NOT assert value, ownership, or compensation.
     """
+
     receipt_id: str
     time_bounds: Tuple[float, float]  # (start, end)
     signal_hashes: List[str]  # Ordered hashes of all signals
@@ -254,6 +260,7 @@ class EffortReceipt:
 @dataclass
 class VerificationResult:
     """Result of third-party receipt verification."""
+
     valid: bool
     receipt_id: str
     checks_passed: List[str]
@@ -431,7 +438,7 @@ class DefaultValidator:
             return 0.7  # Single signal is moderately coherent
 
         timestamps = sorted(s.timestamp for s in segment.signals)
-        gaps = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps)-1)]
+        gaps = [timestamps[i + 1] - timestamps[i] for i in range(len(timestamps) - 1)]
 
         if not gaps:
             return 0.7
@@ -442,7 +449,11 @@ class DefaultValidator:
         # Score based on gap consistency
         if avg_gap == 0:
             return 0.5
-        consistency = min(1.0, expected_gap / avg_gap) if avg_gap > expected_gap else min(1.0, avg_gap / expected_gap)
+        consistency = (
+            min(1.0, expected_gap / avg_gap)
+            if avg_gap > expected_gap
+            else min(1.0, avg_gap / expected_gap)
+        )
         return 0.3 + (0.7 * consistency)
 
     def assess_progression(self, segment: EffortSegment) -> float:
@@ -476,7 +487,7 @@ class DefaultValidator:
         # Check for suspiciously regular timing
         if segment.signal_count >= 3:
             timestamps = sorted(s.timestamp for s in segment.signals)
-            gaps = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps)-1)]
+            gaps = [timestamps[i + 1] - timestamps[i] for i in range(len(timestamps) - 1)]
             if gaps and len(set(round(g, 2) for g in gaps)) == 1:
                 patterns.append("perfectly_regular_timing")
 
@@ -539,12 +550,11 @@ class ReceiptBuilder:
         content: Optional[str] = None,
     ) -> EffortReceipt:
         """Build a receipt from a ValueLedger entry."""
-        from .core import LedgerEntry
 
         # Create a segment from the entry
-        segment_id = entry.id or hashlib.sha256(
-            f"{entry.intent_id}:{entry.timestamp}".encode()
-        ).hexdigest()
+        segment_id = (
+            entry.id or hashlib.sha256(f"{entry.intent_id}:{entry.timestamp}".encode()).hexdigest()
+        )
 
         segment = EffortSegment(
             segment_id=segment_id,
@@ -559,12 +569,14 @@ class ReceiptBuilder:
             segment.signals.append(signal)
         elif entry.proof.content_hash:
             # Create signal from hash if content not available
-            segment.signals.append(EffortSignal(
-                signal_type=SignalType.UNKNOWN,
-                timestamp=entry.timestamp,
-                hash=entry.proof.content_hash,
-                modality="reconstructed",
-            ))
+            segment.signals.append(
+                EffortSignal(
+                    signal_type=SignalType.UNKNOWN,
+                    timestamp=entry.timestamp,
+                    hash=entry.proof.content_hash,
+                    modality="reconstructed",
+                )
+            )
 
         # Build receipt
         receipt = self.from_segment(segment)

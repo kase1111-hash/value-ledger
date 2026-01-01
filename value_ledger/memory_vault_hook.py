@@ -14,6 +14,7 @@ import time
 # from memory_vault.core import MemoryVault, MemoryEntry
 # from learning_contracts.engine import ConsentChecker
 
+
 # Stub types for now (remove when real modules are available)
 @dataclass
 class MemoryEntryStub:
@@ -21,6 +22,7 @@ class MemoryEntryStub:
     timestamp: float
     content: Optional[str] = None  # None if not consented
     metadata: Dict[str, Any] = None
+
 
 class MemoryVaultStub:
     def __init__(self, vault_path: str = "memory_vault/"):
@@ -39,6 +41,7 @@ class MemoryVaultStub:
 
     def get_recent(self, limit: int = 50) -> List[MemoryEntryStub]:
         return []
+
 
 # Temporary stubs — replace with real imports
 MemoryVault = MemoryVaultStub
@@ -112,8 +115,7 @@ class MemoryVaultHook:
         """
         # Find all entries for this intent_id
         relevant_entries = [
-            e for e in ledger.entries
-            if e.intent_id == intent_id and e.status == "active"
+            e for e in ledger.entries if e.intent_id == intent_id and e.status == "active"
         ]
         if not relevant_entries:
             return
@@ -162,4 +164,6 @@ class MemoryVaultHook:
                     },
                     freeze_parent=False,
                 )
-                print(f"[ValueLedger] Novelty corrected for {entry.id[:8]}...: {old_n:.1f} → {new_n:.1f}")
+                print(
+                    f"[ValueLedger] Novelty corrected for {entry.id[:8]}...: {old_n:.1f} → {new_n:.1f}"
+                )

@@ -19,14 +19,12 @@ This module provides:
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 import math
-import re
 import time
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any, Tuple, Set, Callable
+from typing import Dict, List, Optional, Any, Tuple
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -36,8 +34,10 @@ logger = logging.getLogger(__name__)
 # Validation Criteria Configuration
 # =============================================================================
 
+
 class CriteriaType(str, Enum):
     """Types of validation criteria."""
+
     COHERENCE = "coherence"
     PROGRESSION = "progression"
     CONSISTENCY = "consistency"
@@ -48,6 +48,7 @@ class CriteriaType(str, Enum):
 
 class SeverityLevel(str, Enum):
     """Severity levels for validation issues."""
+
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -57,6 +58,7 @@ class SeverityLevel(str, Enum):
 @dataclass
 class ValidationCriterion:
     """A single validation criterion with configurable thresholds."""
+
     name: str
     criterion_type: str
     description: str = ""
@@ -70,6 +72,7 @@ class ValidationCriterion:
 @dataclass
 class ValidationIssue:
     """A validation issue found during assessment."""
+
     issue_id: str
     criterion: str
     severity: str
@@ -92,6 +95,7 @@ class ValidationIssue:
 @dataclass
 class CriteriaConfig:
     """Configuration for validation criteria."""
+
     criteria: List[ValidationCriterion] = field(default_factory=list)
     min_signals: int = 2
     min_duration_seconds: float = 10.0
@@ -154,9 +158,11 @@ class CriteriaConfig:
 # Validation Scores
 # =============================================================================
 
+
 @dataclass
 class CoherenceScore:
     """Detailed coherence assessment."""
+
     overall: float = 0.0
     temporal_distribution: float = 0.0
     gap_consistency: float = 0.0
@@ -167,6 +173,7 @@ class CoherenceScore:
 @dataclass
 class ProgressionScore:
     """Detailed progression assessment."""
+
     overall: float = 0.0
     temporal_flow: float = 0.0
     type_variety: float = 0.0
@@ -177,6 +184,7 @@ class ProgressionScore:
 @dataclass
 class ConsistencyScore:
     """Detailed consistency assessment."""
+
     overall: float = 0.0
     hash_uniqueness: float = 0.0
     metadata_consistency: float = 0.0
@@ -187,6 +195,7 @@ class ConsistencyScore:
 @dataclass
 class AuthenticityScore:
     """Detailed authenticity assessment."""
+
     overall: float = 0.0
     duplication_score: float = 0.0  # Lower is better (less duplication)
     synthesis_score: float = 0.0  # Lower is better (less synthetic)
@@ -198,6 +207,7 @@ class AuthenticityScore:
 @dataclass
 class CompletenessScore:
     """Detailed completeness assessment."""
+
     overall: float = 0.0
     signal_sufficiency: float = 0.0
     duration_adequacy: float = 0.0
@@ -210,6 +220,7 @@ class CompletenessScore:
 # Validation Report
 # =============================================================================
 
+
 @dataclass
 class ValidationReport:
     """
@@ -217,7 +228,10 @@ class ValidationReport:
 
     Per MP-02 §7: Validators must preserve dissent and uncertainty.
     """
-    report_id: str = field(default_factory=lambda: hashlib.sha256(str(time.time()).encode()).hexdigest()[:16])
+
+    report_id: str = field(
+        default_factory=lambda: hashlib.sha256(str(time.time()).encode()).hexdigest()[:16]
+    )
     segment_id: str = ""
     validator_id: str = ""
     timestamp: float = field(default_factory=time.time)
@@ -312,6 +326,7 @@ class ValidationReport:
 # Enhanced Validator
 # =============================================================================
 
+
 class EnhancedValidator:
     """
     Enhanced validator with configurable criteria.
@@ -389,7 +404,7 @@ class EnhancedValidator:
         # Temporal distribution
         if segment.signal_count >= 2:
             timestamps = sorted(s.timestamp for s in segment.signals)
-            gaps = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps)-1)]
+            gaps = [timestamps[i + 1] - timestamps[i] for i in range(len(timestamps) - 1)]
 
             if gaps:
                 avg_gap = sum(gaps) / len(gaps)
@@ -407,14 +422,18 @@ class EnhancedValidator:
 
                     # Check for excessive gaps
                     if max_gap > avg_gap * self.config.max_gap_ratio:
-                        score.issues.append(f"Large gap detected: {max_gap:.1f}s vs avg {avg_gap:.1f}s")
+                        score.issues.append(
+                            f"Large gap detected: {max_gap:.1f}s vs avg {avg_gap:.1f}s"
+                        )
                 else:
                     score.gap_consistency = 0.5
 
                 # Temporal distribution score
                 expected_span = segment.duration / segment.signal_count
                 actual_span = max_gap if gaps else 0
-                score.temporal_distribution = max(0.0, 1.0 - abs(actual_span - expected_span) / (expected_span + 1))
+                score.temporal_distribution = max(
+                    0.0, 1.0 - abs(actual_span - expected_span) / (expected_span + 1)
+                )
         else:
             score.temporal_distribution = 0.5
             score.gap_consistency = 0.5
@@ -436,9 +455,9 @@ class EnhancedValidator:
 
         # Overall coherence
         score.overall = (
-            score.temporal_distribution * 0.4 +
-            score.gap_consistency * 0.4 +
-            score.density_score * 0.2
+            score.temporal_distribution * 0.4
+            + score.gap_consistency * 0.4
+            + score.density_score * 0.2
         )
 
         return score
@@ -458,8 +477,10 @@ class EnhancedValidator:
             score.temporal_flow = 1.0
         else:
             # Calculate how out-of-order
-            inversions = sum(1 for i in range(len(timestamps)-1) if timestamps[i] > timestamps[i+1])
-            score.temporal_flow = max(0.0, 1.0 - inversions / max(len(timestamps)-1, 1))
+            inversions = sum(
+                1 for i in range(len(timestamps) - 1) if timestamps[i] > timestamps[i + 1]
+            )
+            score.temporal_flow = max(0.0, 1.0 - inversions / max(len(timestamps) - 1, 1))
             if inversions > 0:
                 score.issues.append(f"{inversions} out-of-order signals detected")
 
@@ -471,12 +492,14 @@ class EnhancedValidator:
         # (Using hash entropy as a proxy for complexity)
         if segment.signal_count >= 3:
             hashes = [s.hash for s in sorted(segment.signals, key=lambda x: x.timestamp)]
-            early_entropy = self._hash_entropy(hashes[:len(hashes)//2])
-            late_entropy = self._hash_entropy(hashes[len(hashes)//2:])
+            early_entropy = self._hash_entropy(hashes[: len(hashes) // 2])
+            late_entropy = self._hash_entropy(hashes[len(hashes) // 2 :])
 
             # Growth is good, but stability is also acceptable
             if late_entropy >= early_entropy:
-                score.complexity_growth = 0.8 + 0.2 * min(1.0, (late_entropy - early_entropy) / early_entropy if early_entropy > 0 else 0)
+                score.complexity_growth = 0.8 + 0.2 * min(
+                    1.0, (late_entropy - early_entropy) / early_entropy if early_entropy > 0 else 0
+                )
             else:
                 score.complexity_growth = 0.6
         else:
@@ -484,9 +507,7 @@ class EnhancedValidator:
 
         # Overall progression
         score.overall = (
-            score.temporal_flow * 0.5 +
-            score.type_variety * 0.3 +
-            score.complexity_growth * 0.2
+            score.temporal_flow * 0.5 + score.type_variety * 0.3 + score.complexity_growth * 0.2
         )
 
         return score
@@ -511,7 +532,9 @@ class EnhancedValidator:
         # Metadata consistency
         modalities = [s.modality for s in segment.signals]
         modality_counts = Counter(modalities)
-        dominant_modality_ratio = max(modality_counts.values()) / len(modalities) if modalities else 0
+        dominant_modality_ratio = (
+            max(modality_counts.values()) / len(modalities) if modalities else 0
+        )
 
         # Some variety in modality is expected, but too much is suspicious
         if 0.3 <= dominant_modality_ratio <= 0.9:
@@ -537,9 +560,9 @@ class EnhancedValidator:
 
         # Overall consistency
         score.overall = (
-            score.hash_uniqueness * 0.5 +
-            score.metadata_consistency * 0.25 +
-            score.sequence_integrity * 0.25
+            score.hash_uniqueness * 0.5
+            + score.metadata_consistency * 0.25
+            + score.sequence_integrity * 0.25
         )
 
         return score
@@ -568,7 +591,7 @@ class EnhancedValidator:
         # Synthesis detection - check for perfectly regular patterns
         if segment.signal_count >= 3:
             timestamps = sorted(s.timestamp for s in segment.signals)
-            gaps = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps)-1)]
+            gaps = [timestamps[i + 1] - timestamps[i] for i in range(len(timestamps) - 1)]
 
             if gaps:
                 # Check for perfectly regular timing
@@ -578,7 +601,7 @@ class EnhancedValidator:
                     score.adversarial_patterns.append("perfectly_regular_timing")
                 else:
                     # Check for mechanical patterns
-                    gap_variance = sum((g - sum(gaps)/len(gaps)) ** 2 for g in gaps) / len(gaps)
+                    gap_variance = sum((g - sum(gaps) / len(gaps)) ** 2 for g in gaps) / len(gaps)
                     if gap_variance < 0.01:  # Very low variance
                         score.synthesis_score = 0.5
                         score.adversarial_patterns.append("low_timing_variance")
@@ -589,7 +612,9 @@ class EnhancedValidator:
         if segment.signal_count >= 2:
             timestamps = [s.timestamp for s in segment.signals]
             if len(timestamps) >= 2:
-                variance = sum((t - sum(timestamps)/len(timestamps)) ** 2 for t in timestamps) / len(timestamps)
+                variance = sum(
+                    (t - sum(timestamps) / len(timestamps)) ** 2 for t in timestamps
+                ) / len(timestamps)
                 # Higher variance suggests more natural behavior
                 score.natural_variance = min(1.0, math.sqrt(variance) / 100)
             else:
@@ -612,9 +637,9 @@ class EnhancedValidator:
 
         # Overall authenticity (higher is better)
         score.overall = (
-            (1.0 - score.duplication_score) * 0.3 +
-            (1.0 - score.synthesis_score) * 0.4 +
-            score.natural_variance * 0.3
+            (1.0 - score.duplication_score) * 0.3
+            + (1.0 - score.synthesis_score) * 0.4
+            + score.natural_variance * 0.3
         )
 
         return score
@@ -625,32 +650,46 @@ class EnhancedValidator:
 
         # Signal sufficiency
         if segment.signal_count >= self.config.min_signals:
-            score.signal_sufficiency = min(1.0, segment.signal_count / (self.config.min_signals * 2))
+            score.signal_sufficiency = min(
+                1.0, segment.signal_count / (self.config.min_signals * 2)
+            )
         else:
             score.signal_sufficiency = segment.signal_count / self.config.min_signals
-            score.issues.append(f"Insufficient signals: {segment.signal_count} < {self.config.min_signals}")
+            score.issues.append(
+                f"Insufficient signals: {segment.signal_count} < {self.config.min_signals}"
+            )
 
         # Duration adequacy
         if segment.duration >= self.config.min_duration_seconds:
-            score.duration_adequacy = min(1.0, segment.duration / (self.config.min_duration_seconds * 3))
+            score.duration_adequacy = min(
+                1.0, segment.duration / (self.config.min_duration_seconds * 3)
+            )
         else:
             score.duration_adequacy = segment.duration / self.config.min_duration_seconds
-            score.issues.append(f"Short duration: {segment.duration:.1f}s < {self.config.min_duration_seconds}s")
+            score.issues.append(
+                f"Short duration: {segment.duration:.1f}s < {self.config.min_duration_seconds}s"
+            )
 
         # Coverage - check for gaps in observation
         if segment.signal_count >= 2:
             timestamps = sorted(s.timestamp for s in segment.signals)
-            gaps = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps)-1)]
+            gaps = [timestamps[i + 1] - timestamps[i] for i in range(len(timestamps) - 1)]
 
             if gaps:
                 avg_gap = sum(gaps) / len(gaps)
-                large_gaps = [(timestamps[i], timestamps[i+1]) for i, g in enumerate(gaps) if g > avg_gap * 3]
+                large_gaps = [
+                    (timestamps[i], timestamps[i + 1])
+                    for i, g in enumerate(gaps)
+                    if g > avg_gap * 3
+                ]
                 score.gaps = large_gaps
 
                 if large_gaps:
                     gap_time = sum(g[1] - g[0] for g in large_gaps)
                     score.coverage = max(0.0, 1.0 - gap_time / segment.duration)
-                    score.issues.append(f"{len(large_gaps)} observation gaps totaling {gap_time:.1f}s")
+                    score.issues.append(
+                        f"{len(large_gaps)} observation gaps totaling {gap_time:.1f}s"
+                    )
                 else:
                     score.coverage = 1.0
             else:
@@ -660,9 +699,7 @@ class EnhancedValidator:
 
         # Overall completeness
         score.overall = (
-            score.signal_sufficiency * 0.4 +
-            score.duration_adequacy * 0.3 +
-            score.coverage * 0.3
+            score.signal_sufficiency * 0.4 + score.duration_adequacy * 0.3 + score.coverage * 0.3
         )
 
         return score
@@ -672,11 +709,11 @@ class EnhancedValidator:
         weights = self.config.confidence_weights
 
         return (
-            report.coherence.overall * weights.get("coherence", 0.25) +
-            report.progression.overall * weights.get("progression", 0.25) +
-            report.consistency.overall * weights.get("consistency", 0.20) +
-            report.authenticity.overall * weights.get("authenticity", 0.20) +
-            report.completeness.overall * weights.get("completeness", 0.10)
+            report.coherence.overall * weights.get("coherence", 0.25)
+            + report.progression.overall * weights.get("progression", 0.25)
+            + report.consistency.overall * weights.get("consistency", 0.20)
+            + report.authenticity.overall * weights.get("authenticity", 0.20)
+            + report.completeness.overall * weights.get("completeness", 0.10)
         )
 
     def _calculate_confidence(self, report: ValidationReport, segment: "EffortSegment") -> float:
@@ -699,10 +736,10 @@ class EnhancedValidator:
         adversarial_penalty = max(0.0, 1.0 - len(report.authenticity.adversarial_patterns) * 0.2)
 
         return (
-            signal_confidence * 0.3 +
-            duration_confidence * 0.2 +
-            issue_penalty * 0.3 +
-            adversarial_penalty * 0.2
+            signal_confidence * 0.3
+            + duration_confidence * 0.2
+            + issue_penalty * 0.3
+            + adversarial_penalty * 0.2
         )
 
     def _collect_issues(self, report: ValidationReport) -> None:
@@ -802,7 +839,7 @@ class EnhancedValidator:
         if not hashes:
             return 0.0
 
-        all_chars = ''.join(hashes)
+        all_chars = "".join(hashes)
         char_counts = Counter(all_chars)
         total = len(all_chars)
 
@@ -818,6 +855,7 @@ class EnhancedValidator:
 # =============================================================================
 # Specialized Checkers
 # =============================================================================
+
 
 class ConsistencyChecker:
     """
@@ -841,7 +879,7 @@ class ConsistencyChecker:
 
         # Check for negative time progression
         for i in range(len(signals) - 1):
-            if signals[i+1].timestamp < signals[i].timestamp - 1:  # 1 second tolerance
+            if signals[i + 1].timestamp < signals[i].timestamp - 1:  # 1 second tolerance
                 issues.append(f"Time regression between signals {i} and {i+1}")
 
         return (len(issues) == 0, issues)
@@ -862,7 +900,7 @@ class ConsistencyChecker:
         # Check for gaps
         sorted_seqs = sorted(sequences)
         for i in range(len(sorted_seqs) - 1):
-            if sorted_seqs[i+1] - sorted_seqs[i] > 1:
+            if sorted_seqs[i + 1] - sorted_seqs[i] > 1:
                 issues.append(f"Gap in sequence numbers: {sorted_seqs[i]} to {sorted_seqs[i+1]}")
 
         return (len(issues) == 0, issues)
@@ -897,7 +935,7 @@ class DuplicationDetector:
             return patterns
 
         timestamps = sorted(s.timestamp for s in signals)
-        gaps = [timestamps[i+1] - timestamps[i] for i in range(len(timestamps)-1)]
+        gaps = [timestamps[i + 1] - timestamps[i] for i in range(len(timestamps) - 1)]
 
         # Perfectly regular timing
         unique_gaps = set(round(g, 3) for g in gaps)
@@ -943,10 +981,10 @@ class ConfidenceCalculator:
         issue_factor = max(0.0, 1.0 - issue_count * 0.1)
 
         base_confidence = (
-            signal_factor * self.weights["signal_count"] +
-            duration_factor * self.weights["duration"] +
-            consistency_score * self.weights["consistency"] +
-            authenticity_score * self.weights["authenticity"]
+            signal_factor * self.weights["signal_count"]
+            + duration_factor * self.weights["duration"]
+            + consistency_score * self.weights["consistency"]
+            + authenticity_score * self.weights["authenticity"]
         )
 
         return base_confidence * issue_factor
@@ -955,6 +993,7 @@ class ConfidenceCalculator:
 # =============================================================================
 # Convenience Functions
 # =============================================================================
+
 
 def create_enhanced_validator(
     validator_id: str = "enhanced_validator",

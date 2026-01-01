@@ -142,11 +142,13 @@ class TestInterruptionTracker:
         tracker = InterruptionTracker()
         tracker.start_session("intent-1")
 
-        tracker.record_interruption(InterruptionEvent(
-            intent_id="intent-1",
-            timestamp=time.time(),
-            interruption_type=InterruptionType.FOCUS_REGAINED,
-        ))
+        tracker.record_interruption(
+            InterruptionEvent(
+                intent_id="intent-1",
+                timestamp=time.time(),
+                interruption_type=InterruptionType.FOCUS_REGAINED,
+            )
+        )
 
         # Focus regained should not count as an interruption
         assert tracker.get_interruption_count("intent-1") == 0
@@ -156,13 +158,15 @@ class TestInterruptionTracker:
         tracker = InterruptionTracker()
         tracker.start_session("intent-1")
 
-        tracker.record_interruption(InterruptionEvent(
-            intent_id="intent-1",
-            timestamp=time.time(),
-            interruption_type=InterruptionType.EXTERNAL,
-            source="test",
-            duration=3.0,
-        ))
+        tracker.record_interruption(
+            InterruptionEvent(
+                intent_id="intent-1",
+                timestamp=time.time(),
+                interruption_type=InterruptionType.EXTERNAL,
+                source="test",
+                duration=3.0,
+            )
+        )
 
         summary = tracker.end_session("intent-1")
 
@@ -218,12 +222,14 @@ class TestBoundaryDaemonListener:
         tracker.start_session("intent-1")
         listener = BoundaryDaemonListener(tracker)
 
-        result = listener.handle_boundary_event({
-            "type": "notification_received",
-            "intent_id": "intent-1",
-            "source": "slack",
-            "timestamp": time.time(),
-        })
+        result = listener.handle_boundary_event(
+            {
+                "type": "notification_received",
+                "intent_id": "intent-1",
+                "source": "slack",
+                "timestamp": time.time(),
+            }
+        )
 
         assert result is not None
         assert result.interruption_type == InterruptionType.EXTERNAL
@@ -236,11 +242,13 @@ class TestBoundaryDaemonListener:
         tracker.start_session("intent-1")
         listener = BoundaryDaemonListener(tracker)
 
-        listener.handle_boundary_event({
-            "type": "context_switch",
-            "intent_id": "intent-1",
-            "timestamp": time.time(),
-        })
+        listener.handle_boundary_event(
+            {
+                "type": "context_switch",
+                "intent_id": "intent-1",
+                "timestamp": time.time(),
+            }
+        )
 
         assert tracker.get_interruption_count("intent-1") == 1
 
@@ -250,18 +258,22 @@ class TestBoundaryDaemonListener:
         tracker.start_session("intent-1")
         listener = BoundaryDaemonListener(tracker)
 
-        listener.handle_boundary_event({
-            "type": "focus_lost",
-            "intent_id": "intent-1",
-            "timestamp": time.time(),
-        })
+        listener.handle_boundary_event(
+            {
+                "type": "focus_lost",
+                "intent_id": "intent-1",
+                "timestamp": time.time(),
+            }
+        )
 
-        listener.handle_boundary_event({
-            "type": "focus_regained",
-            "intent_id": "intent-1",
-            "duration": 5.0,
-            "timestamp": time.time(),
-        })
+        listener.handle_boundary_event(
+            {
+                "type": "focus_regained",
+                "intent_id": "intent-1",
+                "duration": 5.0,
+                "timestamp": time.time(),
+            }
+        )
 
         # Only focus_lost counts as interruption
         assert tracker.get_interruption_count("intent-1") == 1
@@ -272,11 +284,13 @@ class TestBoundaryDaemonListener:
         tracker.start_session("intent-1")
         listener = BoundaryDaemonListener(tracker)
 
-        result = listener.handle_boundary_event({
-            "type": "unknown_event",
-            "intent_id": "intent-1",
-            "timestamp": time.time(),
-        })
+        result = listener.handle_boundary_event(
+            {
+                "type": "unknown_event",
+                "intent_id": "intent-1",
+                "timestamp": time.time(),
+            }
+        )
 
         assert result is None
         assert tracker.get_interruption_count("intent-1") == 0
@@ -291,10 +305,12 @@ class TestBoundaryDaemonListener:
 
         listener = BoundaryDaemonListener(tracker, active_intent_resolver=resolver)
 
-        result = listener.handle_boundary_event({
-            "type": "notification_received",
-            "timestamp": time.time(),
-        })
+        result = listener.handle_boundary_event(
+            {
+                "type": "notification_received",
+                "timestamp": time.time(),
+            }
+        )
 
         assert result is not None
         assert result.intent_id == "resolved-intent"
@@ -304,10 +320,12 @@ class TestBoundaryDaemonListener:
         tracker = InterruptionTracker()
         listener = BoundaryDaemonListener(tracker)
 
-        result = listener.handle_boundary_event({
-            "type": "notification_received",
-            "timestamp": time.time(),
-        })
+        result = listener.handle_boundary_event(
+            {
+                "type": "notification_received",
+                "timestamp": time.time(),
+            }
+        )
 
         assert result is None
 
@@ -441,16 +459,20 @@ class TestIntegration:
         tracker.start_session("intent-1")
 
         # Add some interruptions
-        tracker.record_interruption(InterruptionEvent(
-            intent_id="intent-1",
-            timestamp=time.time(),
-            interruption_type=InterruptionType.EXTERNAL,
-        ))
-        tracker.record_interruption(InterruptionEvent(
-            intent_id="intent-1",
-            timestamp=time.time(),
-            interruption_type=InterruptionType.CONTEXT_SWITCH,
-        ))
+        tracker.record_interruption(
+            InterruptionEvent(
+                intent_id="intent-1",
+                timestamp=time.time(),
+                interruption_type=InterruptionType.EXTERNAL,
+            )
+        )
+        tracker.record_interruption(
+            InterruptionEvent(
+                intent_id="intent-1",
+                timestamp=time.time(),
+                interruption_type=InterruptionType.CONTEXT_SWITCH,
+            )
+        )
 
         summary = tracker.end_session("intent-1")
 
@@ -481,21 +503,27 @@ class TestMultipleSessions:
         tracker.start_session("intent-2")
 
         # Add interruptions to each
-        tracker.record_interruption(InterruptionEvent(
-            intent_id="intent-1",
-            timestamp=time.time(),
-            interruption_type=InterruptionType.EXTERNAL,
-        ))
-        tracker.record_interruption(InterruptionEvent(
-            intent_id="intent-2",
-            timestamp=time.time(),
-            interruption_type=InterruptionType.EXTERNAL,
-        ))
-        tracker.record_interruption(InterruptionEvent(
-            intent_id="intent-2",
-            timestamp=time.time(),
-            interruption_type=InterruptionType.EXTERNAL,
-        ))
+        tracker.record_interruption(
+            InterruptionEvent(
+                intent_id="intent-1",
+                timestamp=time.time(),
+                interruption_type=InterruptionType.EXTERNAL,
+            )
+        )
+        tracker.record_interruption(
+            InterruptionEvent(
+                intent_id="intent-2",
+                timestamp=time.time(),
+                interruption_type=InterruptionType.EXTERNAL,
+            )
+        )
+        tracker.record_interruption(
+            InterruptionEvent(
+                intent_id="intent-2",
+                timestamp=time.time(),
+                interruption_type=InterruptionType.EXTERNAL,
+            )
+        )
 
         # Verify separate counts
         assert tracker.get_interruption_count("intent-1") == 1
