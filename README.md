@@ -24,10 +24,9 @@ This module is part of a larger 9-module system building Agent-OS, a natural-lan
 
 | Document | Description |
 |----------|-------------|
-| [Installation](docs/installation.md) | Setup and installation instructions |
 | [User Manual](docs/user-manual.md) | CLI commands and Python API usage |
 | [Specs Sheet](docs/specs-sheet.md) | Complete specification: design principles, value units, ledger schema, operations, integrations, and MP-02 protocol |
-| [Contributing](docs/contributing.md) | Guidelines for contributors |
+| [Contributing](docs/contributing.md) | Installation, setup, and contributor guidelines |
 | [Code of Conduct](docs/code-of-conduct.md) | Community standards |
 
 ## Current Status

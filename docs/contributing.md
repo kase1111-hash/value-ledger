@@ -1,16 +1,90 @@
 # Contributing to Value Ledger
 
-Thank you for your interest in contributing to Value Ledger! This document provides guidelines and information for contributors.
+Thank you for your interest in contributing to Value Ledger! This document covers installation, setup, and contribution guidelines.
 
-## Getting Started
+## Installation
 
-### Prerequisites
+### Requirements
 
-- Python 3.9 or higher
+- Python >= 3.9
+- pip (Python package manager)
 - Git
-- pip
 
-### Development Setup
+### Dependencies
+
+- `pydantic>=2.0` - Data validation
+- `cryptography>=41.0` - Cryptographic operations
+
+### From Source
+
+```bash
+# Clone the repository
+git clone https://github.com/kase1111-hash/value-ledger.git
+cd value-ledger
+
+# Install in editable mode
+pip install -e .
+
+# Verify installation
+python -m value_ledger.cli --help
+```
+
+### With Development Dependencies
+
+```bash
+pip install -e ".[dev]"
+```
+
+This includes:
+- `pytest` - Testing framework
+- `black` - Code formatter
+- `ruff` - Linter
+
+### Directory Structure
+
+```
+value-ledger/
+├── value_ledger/          # Main package
+│   ├── __init__.py
+│   ├── core.py            # Core ValueLedger class
+│   ├── cli.py             # Command-line interface
+│   ├── heuristics.py      # Scoring heuristics
+│   ├── integration.py     # IntentLog integration
+│   ├── interruption.py    # Boundary Daemon integration
+│   ├── memory_vault_hook.py
+│   ├── natlangchain.py    # NatLangChain export
+│   ├── receipt.py         # MP-02 Effort Receipts
+│   └── synth_mind.py      # Synth-Mind integration
+├── tests/                 # Test suite
+├── docs/                  # Documentation
+├── LICENSE
+├── README.md
+└── pyproject.toml
+```
+
+### Storage Configuration
+
+The ledger uses JSONL (JSON Lines) format for storage. Default path: `ledger.jsonl`
+
+When integrated with Agent-OS:
+
+```
+~/.agent-os/
+├── ledger.jsonl          # Value Ledger storage
+├── intent_log.jsonl      # IntentLog storage
+├── memory_vault/         # Memory Vault storage
+└── contracts/            # Learning Contracts storage
+```
+
+### Troubleshooting
+
+**Import Errors:** Ensure pydantic is installed: `pip install pydantic>=2.0`
+
+**Permission Issues:** Ensure write permissions: `chmod 755 ~/.agent-os/`
+
+---
+
+## Development Setup
 
 1. Fork the repository
 2. Clone your fork:
