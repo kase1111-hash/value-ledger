@@ -284,15 +284,22 @@ The Agent-OS ecosystem consists of 9 modules:
 
 ## Integration Status Summary
 
-| Module | Status | Implementation |
-|--------|--------|----------------|
-| IntentLog | ✅ Implemented | `integration.py` |
-| Memory Vault | ⚠️ Stubbed | `memory_vault_hook.py` |
-| Learning Contracts | ⚠️ Stubbed | Consent checking |
-| Boundary Daemon | ✅ Implemented | `interruption.py` |
-| Agent-OS Core | ✅ Ready | Factory functions |
-| Synth-Mind | ✅ Implemented | `synth_mind.py` |
-| NatLangChain | ✅ Implemented | `natlangchain.py` |
+| Module | Status | Implementation | Lines |
+|--------|--------|----------------|-------|
+| Core Ledger | ✅ Implemented | `core.py` | 1,196 |
+| CLI | ✅ Implemented | `cli.py` | 533 |
+| Heuristics | ✅ Implemented | `heuristics.py` | 357 |
+| IntentLog | ✅ Implemented | `integration.py` | 135 |
+| Boundary Daemon | ✅ Implemented | `interruption.py` | 700 |
+| Synth-Mind | ✅ Implemented | `synth_mind.py` | 403 |
+| NatLangChain | ✅ Implemented | `natlangchain.py` | 721 |
+| MP-02 Receipts | ✅ Implemented | `receipt.py` | 647 |
+| Privacy & Agency | ✅ Implemented | `privacy.py` | 793 |
+| Enhanced Validation | ✅ Implemented | `validation.py` | 994 |
+| Compatibility | ✅ Implemented | `compatibility.py` | 966 |
+| Memory Vault | ⚠️ Stubbed | `memory_vault_hook.py` | 165 |
+| Learning Contracts | ⚠️ Stubbed | Consent checking | - |
+| Agent-OS Core | ✅ Ready | Factory functions | - |
 
 ---
 
@@ -384,6 +391,203 @@ exporter = NatLangChainExporter(client)
 
 record = exporter.to_nlc_format(ledger_entry)
 result = exporter.anchor_to_chain(record)
+```
+
+---
+
+## Synth-Mind Integration
+
+### Status: ✅ Implemented
+
+Cognitive tier tracking for valuing different types of mental effort.
+
+### Cognitive Tiers
+
+| Tier | Name | Description |
+|------|------|-------------|
+| 1 | SYSTEM1 | Fast, intuitive, pattern-matching |
+| 2 | SYSTEM2 | Deliberate, analytical, logical |
+| 3 | META | Self-reflection, strategy evaluation |
+| 4 | EXECUTIVE | Goal management, resource allocation |
+
+### Key Classes
+
+- `CognitiveTierContext` - Tier history and metrics
+- `CognitiveTierScorer` - Values tier usage patterns
+- `TierChangeEvent` - Tracks tier transitions
+- `SynthMindHook` - Integration point for Synth-Mind module
+
+### Usage Example
+
+```python
+from value_ledger import CognitiveTierContext, CognitiveTierScorer
+
+context = CognitiveTierContext()
+context.record_tier_change(CognitiveTier.SYSTEM1, CognitiveTier.SYSTEM2)
+
+scorer = CognitiveTierScorer()
+score = scorer.score(context)
+```
+
+---
+
+## Privacy & Agency Controls
+
+### Status: ✅ Implemented
+
+Per MP-02 §12, implements privacy controls and human agency.
+
+### Privacy Levels
+
+| Level | Description |
+|-------|-------------|
+| PUBLIC | No restrictions |
+| INTERNAL | Organization-only access |
+| RESTRICTED | Need-to-know basis |
+| CONFIDENTIAL | Encrypted, explicit consent required |
+
+### Consent Management
+
+| Status | Description |
+|--------|-------------|
+| GRANTED | Consent given (may have time bounds) |
+| PENDING | Awaiting consent decision |
+| REVOKED | Consent withdrawn |
+
+### Revocation Scopes
+
+| Scope | Effect |
+|-------|--------|
+| SINGLE | Revoke single receipt only |
+| INTENT | Revoke all receipts for an intent |
+| ALL_FUTURE | Revoke all future observation rights |
+
+### Key Classes
+
+- `PrivacyLevel` - Enumeration of privacy levels
+- `ConsentStatus` - Consent state tracking
+- `RevocationScope` - Scope of revocation actions
+- `ObservationConsent` - Consent record with time bounds
+- `SignalEncryptor` - Fernet-based encryption (PBKDF2HMAC key derivation)
+- `PrivacyFilter` - Content filtering based on privacy levels
+- `ConsentRegistry` - Manages consent records
+- `AgencyController` - Controls revocation and data access
+
+### Usage Example
+
+```python
+from value_ledger import SignalEncryptor, PrivacyFilter, ConsentRegistry
+
+# Encrypt sensitive signals
+encryptor = SignalEncryptor(password="secure_password")
+encrypted = encryptor.encrypt("sensitive content")
+decrypted = encryptor.decrypt(encrypted)
+
+# Filter content by privacy level
+filter = PrivacyFilter()
+filtered = filter.filter_content(receipt, PrivacyLevel.INTERNAL)
+
+# Manage consent
+registry = ConsentRegistry()
+registry.grant_consent(human_id="user-123", scope="observation")
+```
+
+---
+
+## Enhanced Validation Criteria
+
+### Status: ✅ Implemented
+
+Per MP-02 §7, validators MAY assess multiple dimensions of effort.
+
+### Validation Criteria
+
+| Criterion | Description |
+|-----------|-------------|
+| Coherence | Linguistic consistency and structure |
+| Progression | Conceptual development over time |
+| Consistency | Internal agreement across signals |
+| Authenticity | Indicators of synthesis vs duplication |
+| Completeness | Coverage and comprehensiveness |
+| Temporal | Time sequence validity |
+
+### Key Classes
+
+- `CoherenceScore` - Linguistic structure assessment
+- `ProgressionScore` - Conceptual advancement detection
+- `ConsistencyScore` - Internal agreement checking
+- `AuthenticityScore` - Synthesis indicators
+- `CompletenessScore` - Coverage assessment
+- `EnhancedValidator` - Main validation orchestrator
+- `ConsistencyChecker` - Signal agreement analysis
+- `DuplicationDetector` - Plagiarism/synthesis detection
+- `ConfidenceCalculator` - Confidence scoring
+
+### Usage Example
+
+```python
+from value_ledger import EnhancedValidator
+
+validator = EnhancedValidator()
+result = validator.validate(effort_segment)
+
+print(f"Coherence: {result.coherence.score}")
+print(f"Progression: {result.progression.score}")
+print(f"Authenticity: {result.authenticity.score}")
+```
+
+---
+
+## MP-02 External Compatibility
+
+### Status: ✅ Implemented
+
+External protocol interoperability and licensing management.
+
+### License Types
+
+| Type | Description |
+|------|-------------|
+| EXCLUSIVE | Single licensee, no other grants |
+| NON_EXCLUSIVE | Multiple licensees allowed |
+| DELEGATION_ALLOWED | Licensee may sublicense (max depth: 3) |
+
+### Audit Export Formats
+
+| Format | Use Case |
+|--------|----------|
+| JSON-LD | Linked data applications |
+| W3C Verifiable Credentials | Identity and credential systems |
+| OpenTimestamps-style | Blockchain timestamping |
+| Audit Logs | Compliance and auditing |
+
+### Key Classes
+
+- `MP01Proposal` - Negotiation proposal format
+- `MP01Ratification` - Ratification method support
+- `LicenseManager` - Grant, revoke, delegate licenses
+- `LicenseType` - License type enumeration
+- `DelegationRecord` - License delegation tracking
+- `AuditExporter` - Export to multiple formats
+- `ProtocolAdapter` - Cross-protocol interoperability
+
+### Usage Example
+
+```python
+from value_ledger import LicenseManager, AuditExporter
+
+# License management
+manager = LicenseManager()
+license_id = manager.grant_license(
+    receipt_id="receipt-123",
+    licensee="org-456",
+    license_type=LicenseType.NON_EXCLUSIVE
+)
+
+# Export to audit formats
+exporter = AuditExporter()
+json_ld = exporter.to_json_ld(receipt)
+w3c_vc = exporter.to_w3c_vc(receipt)
 ```
 
 ---
@@ -539,25 +743,50 @@ Past receipts remain immutable.
 
 # Part 4: Implementation Status
 
+## Codebase Statistics
+
+- **Total modules:** 13 Python files
+- **Total code:** ~7,825 lines
+- **Test files:** 5 test modules
+- **Dependencies:** pydantic (required), cryptography (required), sentence-transformers (optional), torch (optional)
+
 ## Implemented Features (v0.5.0)
 
-| Feature | Module | Status |
-|---------|--------|--------|
-| Proof System | `core.py` | ✅ Implemented |
-| Effort Receipt Protocol | `receipt.py` | ✅ Implemented |
-| Owner & Classification | `core.py` | ✅ Implemented |
-| Multi-Parent Aggregation | `core.py` | ✅ Implemented |
-| Failure Mode Handling | `core.py` | ✅ Implemented |
-| Synth-Mind Integration | `synth_mind.py` | ✅ Implemented |
-| NatLangChain Export | `natlangchain.py` | ✅ Implemented |
-| Admin CLI | `cli.py` | ✅ Implemented |
-| Explicit Revocation | `core.py` | ✅ Implemented |
-| Reusability Metric | `heuristics.py` | ✅ Implemented |
-| Boundary Daemon Integration | `interruption.py` | ✅ Implemented |
-| MP-02 Privacy & Agency Controls | `privacy.py` | ✅ Implemented |
-| MP-02 External Compatibility | `compatibility.py` | ✅ Implemented |
-| Enhanced Validation Criteria | `validation.py` | ✅ Implemented |
-| Security Hardening (SSRF, Path Traversal) | `core.py` | ✅ Implemented |
+| Feature | Module | Status | Lines |
+|---------|--------|--------|-------|
+| Core Ledger & Proofs | `core.py` | ✅ Implemented | 1,196 |
+| Command-Line Interface | `cli.py` | ✅ Implemented | 533 |
+| Heuristic Scoring (7 scorers) | `heuristics.py` | ✅ Implemented | 357 |
+| IntentLog Integration | `integration.py` | ✅ Implemented | 135 |
+| Boundary Daemon Integration | `interruption.py` | ✅ Implemented | 700 |
+| Effort Receipt Protocol | `receipt.py` | ✅ Implemented | 647 |
+| Privacy & Agency Controls | `privacy.py` | ✅ Implemented | 793 |
+| Enhanced Validation | `validation.py` | ✅ Implemented | 994 |
+| External Compatibility | `compatibility.py` | ✅ Implemented | 966 |
+| NatLangChain Export | `natlangchain.py` | ✅ Implemented | 721 |
+| Synth-Mind Integration | `synth_mind.py` | ✅ Implemented | 403 |
+| Memory Vault Hook | `memory_vault_hook.py` | ⚠️ Stubbed | 165 |
+
+## Security Features
+
+| Feature | Implementation | Status |
+|---------|----------------|--------|
+| Path Traversal Prevention | `_validate_ledger_path()` in `core.py` | ✅ Implemented |
+| Null Byte Detection | Ledger path validation | ✅ Implemented |
+| Sensitive Path Blocking | /etc, /proc, /sys, .ssh, .aws blocked | ✅ Implemented |
+| SSRF Protection | `_validate_url()` in `natlangchain.py` | ✅ Implemented |
+| Private IP Blocking | Loopback, private ranges, metadata services | ✅ Implemented |
+| Signal Encryption | Fernet + PBKDF2HMAC in `privacy.py` | ✅ Implemented |
+
+## Test Coverage
+
+| Test File | Focus |
+|-----------|-------|
+| `test_validation.py` | Enhanced validation criteria |
+| `test_compatibility.py` | MP-02 compatibility, licensing, audit |
+| `test_interruption.py` | Interruption tracking |
+| `test_privacy.py` | Privacy & consent controls |
+| `test_e2e_simulation.py` | End-to-end workflows |
 
 ---
 

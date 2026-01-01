@@ -333,6 +333,228 @@ result = exporter.anchor_to_chain(record)
 
 ---
 
+## Synth-Mind Integration
+
+Track cognitive tier changes during work sessions:
+
+```python
+from value_ledger import CognitiveTierContext, CognitiveTierScorer, CognitiveTier
+
+# Create tier context
+context = CognitiveTierContext()
+
+# Record tier changes
+context.record_tier_change(CognitiveTier.SYSTEM1, CognitiveTier.SYSTEM2)
+context.record_tier_change(CognitiveTier.SYSTEM2, CognitiveTier.META)
+
+# Score the cognitive effort
+scorer = CognitiveTierScorer()
+score = scorer.score(context)
+
+# Access tier history
+print(f"Tier changes: {len(context.tier_changes)}")
+print(f"Time in META tier: {context.time_in_tier(CognitiveTier.META)}")
+```
+
+### Cognitive Tiers
+
+| Tier | Name | Description |
+|------|------|-------------|
+| 1 | SYSTEM1 | Fast, intuitive, pattern-matching |
+| 2 | SYSTEM2 | Deliberate, analytical, logical |
+| 3 | META | Self-reflection, strategy evaluation |
+| 4 | EXECUTIVE | Goal management, resource allocation |
+
+---
+
+## Privacy & Agency Controls
+
+Manage privacy levels, consent, and encryption:
+
+```python
+from value_ledger import (
+    SignalEncryptor,
+    PrivacyFilter,
+    ConsentRegistry,
+    AgencyController,
+    PrivacyLevel,
+    RevocationScope,
+)
+
+# Encrypt sensitive signals
+encryptor = SignalEncryptor(password="secure_password")
+encrypted = encryptor.encrypt("sensitive content")
+decrypted = encryptor.decrypt(encrypted)
+
+# Filter content by privacy level
+filter = PrivacyFilter()
+filtered = filter.filter_content(receipt, PrivacyLevel.INTERNAL)
+
+# Manage consent
+registry = ConsentRegistry()
+registry.grant_consent(human_id="user-123", scope="observation")
+registry.revoke_consent(human_id="user-123", scope="observation")
+
+# Control agency
+controller = AgencyController(registry)
+controller.revoke_observation(
+    human_id="user-123",
+    scope=RevocationScope.ALL_FUTURE,
+    reason="User requested full revocation"
+)
+```
+
+### Privacy Levels
+
+| Level | Description |
+|-------|-------------|
+| PUBLIC | No restrictions |
+| INTERNAL | Organization-only access |
+| RESTRICTED | Need-to-know basis |
+| CONFIDENTIAL | Encrypted, explicit consent required |
+
+---
+
+## Enhanced Validation
+
+Validate effort segments with multiple criteria:
+
+```python
+from value_ledger import (
+    EnhancedValidator,
+    ConsistencyChecker,
+    DuplicationDetector,
+    ConfidenceCalculator,
+)
+
+# Create validator
+validator = EnhancedValidator()
+
+# Validate effort segment
+result = validator.validate(effort_segment)
+
+# Access individual scores
+print(f"Coherence: {result.coherence.score}")
+print(f"Progression: {result.progression.score}")
+print(f"Consistency: {result.consistency.score}")
+print(f"Authenticity: {result.authenticity.score}")
+print(f"Completeness: {result.completeness.score}")
+
+# Check for duplicates
+detector = DuplicationDetector()
+is_duplicate = detector.check(signal_content)
+
+# Calculate confidence
+calculator = ConfidenceCalculator()
+confidence = calculator.calculate(validation_result)
+```
+
+### Validation Criteria
+
+| Criterion | Description |
+|-----------|-------------|
+| Coherence | Linguistic consistency and structure |
+| Progression | Conceptual development over time |
+| Consistency | Internal agreement across signals |
+| Authenticity | Indicators of synthesis vs duplication |
+| Completeness | Coverage and comprehensiveness |
+
+---
+
+## License Management
+
+Manage licenses for effort receipts:
+
+```python
+from value_ledger import LicenseManager, LicenseType, AuditExporter
+
+# Create license manager
+manager = LicenseManager()
+
+# Grant a license
+license_id = manager.grant_license(
+    receipt_id="receipt-123",
+    licensee="org-456",
+    license_type=LicenseType.NON_EXCLUSIVE,
+)
+
+# Delegate a license
+delegation_id = manager.delegate_license(
+    license_id=license_id,
+    delegatee="sub-org-789",
+)
+
+# Revoke a license
+manager.revoke_license(license_id, reason="Contract ended")
+
+# Export to audit formats
+exporter = AuditExporter()
+json_ld = exporter.to_json_ld(receipt)
+w3c_vc = exporter.to_w3c_vc(receipt)
+opentimestamps = exporter.to_opentimestamps(receipt)
+```
+
+### License Types
+
+| Type | Description |
+|------|-------------|
+| EXCLUSIVE | Single licensee, no other grants allowed |
+| NON_EXCLUSIVE | Multiple licensees allowed |
+| DELEGATION_ALLOWED | Licensee may sublicense (max depth: 3) |
+
+---
+
+## Effort Receipts (MP-02)
+
+Create and manage effort receipts:
+
+```python
+from value_ledger import (
+    ReceiptBuilder,
+    DefaultObserver,
+    DefaultValidator,
+    EffortSignal,
+    SignalType,
+)
+
+# Create observer and validator
+observer = DefaultObserver(observer_id="obs-001")
+validator = DefaultValidator(validator_id="val-001")
+
+# Observe signals
+signal = observer.observe(
+    content="User typed code implementation",
+    signal_type=SignalType.KEYSTROKE,
+)
+
+# Build receipt
+builder = ReceiptBuilder()
+receipt = (
+    builder
+    .add_signal(signal)
+    .set_time_bounds(start=1700000000, end=1700003600)
+    .set_observer(observer.observer_id)
+    .set_validator(validator.validator_id)
+    .build()
+)
+
+# Validate receipt
+validation = validator.validate(receipt)
+```
+
+### Signal Types
+
+| Type | Description |
+|------|-------------|
+| VOICE | Voice transcripts |
+| TEXT | Text edits |
+| COMMAND | Command history |
+| TOOL | Structured tool interaction |
+| KEYSTROKE | Keyboard input |
+| NAVIGATION | App/page navigation |
+
+---
+
 ## Best Practices
 
 1. **Regular Backups**: Export ledger periodically using `export` command
@@ -340,6 +562,9 @@ result = exporter.anchor_to_chain(record)
 3. **Include Metadata**: Add relevant metadata for future reference
 4. **Revoke Properly**: Use revocation with reasons, don't delete entries
 5. **Verify Proofs**: Use `proof` command to verify entry existence
+6. **Manage Consent**: Always check consent before observing signals
+7. **Encrypt Sensitive Data**: Use SignalEncryptor for confidential content
+8. **Validate Effort**: Use EnhancedValidator for receipt quality assurance
 
 ## Troubleshooting
 
