@@ -6,10 +6,9 @@ Now understands semantic similarity, not just word overlap.
 
 from __future__ import annotations
 
-import time
 import math
 from dataclasses import dataclass
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Tuple, Optional, Dict
 
 from .core import ValueVector
 
@@ -17,6 +16,7 @@ from .core import ValueVector
 try:
     from sentence_transformers import SentenceTransformer
     import torch
+
     _EMBEDDING_MODEL = None  # Loaded on first use
     _HAS_EMBEDDINGS = True
 except ImportError:
@@ -30,10 +30,10 @@ def get_embedding_model():
         if not _HAS_EMBEDDINGS:
             raise RuntimeError("sentence-transformers not available")
         # Lightweight, high-quality, multilingual model
-        _EMBEDDING_MODEL = SentenceTransformer('all-MiniLM-L6-v2')
+        _EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
         # Move to GPU if available
         if torch.cuda.is_available():
-            _EMBEDDING_MODEL = _EMBEDDING_MODEL.to('cuda')
+            _EMBEDDING_MODEL = _EMBEDDING_MODEL.to("cuda")
     return _EMBEDDING_MODEL
 
 
@@ -58,6 +58,7 @@ class HeuristicScorer:
 
 
 # ==================== Scorers (unchanged except Novelty) ====================
+
 
 class TimeScorer(HeuristicScorer):
     def __call__(self, ctx: ScoringContext) -> ValueVector:
@@ -98,6 +99,7 @@ class NoveltyScorer(HeuristicScorer):
     Uses semantic embeddings to compare current thought against personal history.
     Much more accurate than word overlap.
     """
+
     def __call__(self, ctx: ScoringContext) -> ValueVector:
         content = ctx.memory_content
         prev = ctx.previous_memories or []
@@ -124,7 +126,7 @@ class NoveltyScorer(HeuristicScorer):
                 valid_prev_contents,
                 normalize_embeddings=True,
                 batch_size=16,
-                show_progress_bar=False
+                show_progress_bar=False,
             )
 
             # Cosine similarity = dot product (since normalized)
@@ -193,7 +195,13 @@ class RiskScorer(HeuristicScorer):
         inferred = 0.0
         if ctx.memory_content:
             content = ctx.memory_content.lower()
-            high_risk_phrases = ["all in", "bet everything", "existential", "critical path", "do or die"]
+            high_risk_phrases = [
+                "all in",
+                "bet everything",
+                "existential",
+                "critical path",
+                "do or die",
+            ]
             medium_risk = ["gamble", "risky", "danger", "bold move"]
             if any(phrase in content for phrase in high_risk_phrases):
                 inferred = 0.9
@@ -209,9 +217,15 @@ class StrategyScorer(HeuristicScorer):
         lower = content.lower()
         base = 3.0
         indicators = {
-            "architecture": 6.0, "framework": 5.5, "system design": 6.5,
-            "long-term": 4.0, "leverage": 5.0, "second-order": 8.0,
-            "meta": 7.0, "counterfactual": 7.5, "plan b": 4.5,
+            "architecture": 6.0,
+            "framework": 5.5,
+            "system design": 6.5,
+            "long-term": 4.0,
+            "leverage": 5.0,
+            "second-order": 8.0,
+            "meta": 7.0,
+            "counterfactual": 7.5,
+            "plan b": 4.5,
         }
         score = base
         for phrase, boost in indicators.items():
@@ -325,12 +339,13 @@ class ReusabilityScorer(HeuristicScorer):
 
 # ==================== Engine ====================
 
+
 class HeuristicEngine:
     def __init__(self):
         self.scorers = [
             TimeScorer(),
             EffortScorer(),
-            NoveltyScorer(),   # ← Now embedding-powered!
+            NoveltyScorer(),  # ← Now embedding-powered!
             FailureScorer(),
             RiskScorer(),
             StrategyScorer(),

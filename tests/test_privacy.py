@@ -37,6 +37,7 @@ from value_ledger.privacy import (
 # ObservationConsent Tests
 # ============================================================================
 
+
 class TestObservationConsent:
     """Tests for observation consent management."""
 
@@ -81,6 +82,7 @@ class TestObservationConsent:
 # ============================================================================
 # SignalEncryptor Tests
 # ============================================================================
+
 
 @pytest.mark.skipif(not CRYPTO_AVAILABLE, reason="cryptography library not available")
 class TestSignalEncryptor:
@@ -132,6 +134,7 @@ class TestSignalEncryptorNoLibrary:
     def test_convenience_functions_exist(self):
         # These should be importable even without cryptography
         from value_ledger.privacy import encrypt_signal_content, decrypt_signal_content
+
         assert callable(encrypt_signal_content)
         assert callable(decrypt_signal_content)
 
@@ -139,6 +142,7 @@ class TestSignalEncryptorNoLibrary:
 # ============================================================================
 # PrivacyPolicy Tests
 # ============================================================================
+
 
 class TestPrivacyPolicy:
     """Tests for privacy policy configuration."""
@@ -163,6 +167,7 @@ class TestPrivacyPolicy:
 # ============================================================================
 # PrivacyFilter Tests
 # ============================================================================
+
 
 class TestPrivacyFilter:
     """Tests for privacy filtering of signals and receipts."""
@@ -229,6 +234,7 @@ class TestPrivacyFilter:
 # ============================================================================
 # ConsentRegistry Tests
 # ============================================================================
+
 
 class TestConsentRegistry:
     """Tests for consent registry management."""
@@ -322,6 +328,7 @@ class TestConsentRegistry:
 # AgencyController Tests
 # ============================================================================
 
+
 class TestAgencyController:
     """Tests for agency controller (human control over observation)."""
 
@@ -394,6 +401,7 @@ class TestAgencyController:
 # ============================================================================
 # Integration Tests
 # ============================================================================
+
 
 class TestPrivacyIntegration:
     """Integration tests for privacy controls."""

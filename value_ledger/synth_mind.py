@@ -26,15 +26,17 @@ from .core import ValueVector
 
 class CognitiveTier(IntEnum):
     """Cognitive processing tiers from Synth-Mind architecture."""
+
     SYSTEM1 = 1  # Fast, intuitive
     SYSTEM2 = 2  # Deliberate, analytical
-    META = 3     # Self-reflection
+    META = 3  # Self-reflection
     EXECUTIVE = 4  # Goal management
 
 
 @dataclass
 class TierChangeEvent:
     """Event emitted when cognitive tier changes."""
+
     timestamp: float
     from_tier: Optional[int]
     to_tier: int
@@ -49,6 +51,7 @@ class CognitiveTierContext:
 
     Can be used standalone or merged with ScoringContext.
     """
+
     # Tier tracking
     initial_tier: int = CognitiveTier.SYSTEM1
     final_tier: int = CognitiveTier.SYSTEM1
@@ -101,7 +104,9 @@ class CognitiveTierContext:
         # Compute deliberation ratio
         total = sum(self.time_per_tier.values())
         if total > 0:
-            deliberate_time = sum(t for tier, t in self.time_per_tier.items() if tier >= CognitiveTier.SYSTEM2)
+            deliberate_time = sum(
+                t for tier, t in self.time_per_tier.items() if tier >= CognitiveTier.SYSTEM2
+            )
             self.deliberation_ratio = deliberate_time / total
 
 
@@ -118,9 +123,9 @@ class CognitiveTierScorer:
 
     # Base multipliers for each tier
     TIER_EFFORT_MULTIPLIERS = {
-        CognitiveTier.SYSTEM1: 0.5,   # Fast intuition - lower effort
-        CognitiveTier.SYSTEM2: 1.0,   # Deliberate - baseline
-        CognitiveTier.META: 1.5,      # Reflection - higher effort
+        CognitiveTier.SYSTEM1: 0.5,  # Fast intuition - lower effort
+        CognitiveTier.SYSTEM2: 1.0,  # Deliberate - baseline
+        CognitiveTier.META: 1.5,  # Reflection - higher effort
         CognitiveTier.EXECUTIVE: 2.0,  # Executive - highest effort
     }
 
@@ -178,9 +183,11 @@ class CognitiveTierScorer:
 
         # Compute time distribution if not done
         if not tier_context.time_per_tier:
-            total_time = sum(
-                e.timestamp for e in tier_context.tier_history
-            ) if tier_context.tier_history else 0
+            total_time = (
+                sum(e.timestamp for e in tier_context.tier_history)
+                if tier_context.tier_history
+                else 0
+            )
             tier_context.compute_time_distribution(total_time or 60)
 
         # 1. Effort from tier complexity
@@ -213,7 +220,9 @@ class CognitiveTierScorer:
             s += 0.2 * tier_context.deliberation_ratio
 
         # 6. Risk awareness from executive tier usage
-        exec_ratio = tier_context.time_per_tier.get(CognitiveTier.EXECUTIVE, 0) / max(total_tier_time, 1)
+        exec_ratio = tier_context.time_per_tier.get(CognitiveTier.EXECUTIVE, 0) / max(
+            total_tier_time, 1
+        )
         r += exec_ratio * 0.5
 
         return ValueVector(

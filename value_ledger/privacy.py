@@ -22,7 +22,7 @@ import json
 import logging
 import os
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any, Set
 from enum import Enum
 from pathlib import Path
@@ -46,6 +46,7 @@ def _try_import_cryptography():
     try:
         # Try importing with a subprocess check first to avoid crashing
         import importlib.util
+
         spec = importlib.util.find_spec("cryptography")
         if spec is None:
             return False
@@ -110,9 +111,16 @@ def _validate_storage_path(path: str, base_dir: Optional[str] = None) -> Path:
 
     # Block common sensitive paths
     sensitive_patterns = [
-        "/etc/", "/proc/", "/sys/", "/dev/",
-        "/.ssh/", "/.aws/", "/.config/",
-        "/passwd", "/shadow", "/id_rsa",
+        "/etc/",
+        "/proc/",
+        "/sys/",
+        "/dev/",
+        "/.ssh/",
+        "/.aws/",
+        "/.config/",
+        "/passwd",
+        "/shadow",
+        "/id_rsa",
     ]
     path_str = str(resolved).lower()
     for pattern in sensitive_patterns:
@@ -125,6 +133,7 @@ def _validate_storage_path(path: str, base_dir: Optional[str] = None) -> Path:
 
 class PrivacyLevel(str, Enum):
     """Privacy levels for signals and receipts."""
+
     PUBLIC = "public"  # No restrictions
     HASH_ONLY = "hash_only"  # Only hash exposed, content hidden
     ENCRYPTED = "encrypted"  # Content encrypted, key required
@@ -134,6 +143,7 @@ class PrivacyLevel(str, Enum):
 
 class ConsentStatus(str, Enum):
     """Status of observation consent."""
+
     GRANTED = "granted"
     REVOKED = "revoked"
     PENDING = "pending"
@@ -142,6 +152,7 @@ class ConsentStatus(str, Enum):
 
 class RevocationScope(str, Enum):
     """Scope of observation revocation."""
+
     ALL = "all"  # Revoke all future observation
     SESSION = "session"  # Revoke for current session only
     SIGNAL_TYPE = "signal_type"  # Revoke specific signal types
@@ -155,6 +166,7 @@ class ObservationConsent:
 
     Per MP-02 §12: Humans MAY revoke future observation.
     """
+
     human_id: str
     status: str = ConsentStatus.PENDING
     granted_at: Optional[float] = None
@@ -203,6 +215,7 @@ class EncryptedContent:
 
     Per MP-02 §12: Raw signals MAY be encrypted.
     """
+
     ciphertext: bytes
     salt: bytes
     nonce: Optional[bytes] = None
@@ -214,7 +227,9 @@ class EncryptedContent:
         return {
             "ciphertext": base64.b64encode(self.ciphertext).decode() if CRYPTO_AVAILABLE else "",
             "salt": base64.b64encode(self.salt).decode() if CRYPTO_AVAILABLE else "",
-            "nonce": base64.b64encode(self.nonce).decode() if self.nonce and CRYPTO_AVAILABLE else None,
+            "nonce": (
+                base64.b64encode(self.nonce).decode() if self.nonce and CRYPTO_AVAILABLE else None
+            ),
             "algorithm": self.algorithm,
             "key_hint": self.key_hint,
         }
@@ -317,8 +332,11 @@ class PrivacyPolicy:
 
     Defines what information can be exposed and to whom.
     """
+
     default_level: str = PrivacyLevel.HASH_ONLY
-    allow_content_in_receipts: bool = False  # Per MP-02: Receipts MUST not expose raw content by default
+    allow_content_in_receipts: bool = (
+        False  # Per MP-02: Receipts MUST not expose raw content by default
+    )
     allow_summary_generation: bool = True
     redact_patterns: List[str] = field(default_factory=list)  # Regex patterns to redact
     authorized_readers: Set[str] = field(default_factory=set)
@@ -343,7 +361,9 @@ class PrivacyFilter:
         self.policy = policy or PrivacyPolicy()
         self._redaction_marker = "[REDACTED]"
 
-    def filter_signal(self, signal_data: Dict[str, Any], reader_id: Optional[str] = None) -> Dict[str, Any]:
+    def filter_signal(
+        self, signal_data: Dict[str, Any], reader_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Filter signal data based on privacy policy.
 
@@ -380,7 +400,9 @@ class PrivacyFilter:
         filtered["privacy_level"] = self.policy.default_level
         return filtered
 
-    def filter_receipt(self, receipt_data: Dict[str, Any], reader_id: Optional[str] = None) -> Dict[str, Any]:
+    def filter_receipt(
+        self, receipt_data: Dict[str, Any], reader_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Filter receipt data to not expose raw content.
 
@@ -536,7 +558,9 @@ class ConsentRegistry:
         logger.info(f"Granted observation consent for {human_id}")
         return consent
 
-    def revoke_consent(self, human_id: str, reason: Optional[str] = None) -> Optional[ObservationConsent]:
+    def revoke_consent(
+        self, human_id: str, reason: Optional[str] = None
+    ) -> Optional[ObservationConsent]:
         """
         Revoke future observation consent.
 
@@ -741,6 +765,7 @@ class AgencyController:
 
 
 # Convenience functions for module-level access
+
 
 def create_privacy_controller(
     consent_storage_path: Optional[str] = None,

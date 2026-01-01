@@ -18,7 +18,7 @@ from __future__ import annotations
 import hashlib
 import json
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any, Tuple
 from enum import Enum
 import urllib.request
@@ -88,6 +88,7 @@ def _validate_url(url: str, allow_private: bool = False) -> None:
 
 class AnchorStatus(str, Enum):
     """Status of a chain anchor operation."""
+
     PENDING = "pending"
     ANCHORED = "anchored"
     FAILED = "failed"
@@ -102,6 +103,7 @@ class NLCRecord:
     NatLangChain requires prose-first entries where natural language
     forms the immutable substrate of the ledger.
     """
+
     record_type: str = "effort_receipt"
     timestamp: float = field(default_factory=time.time)
     proof_hash: str = ""  # SHA-256 compatible with NLC block chaining
@@ -167,6 +169,7 @@ class NLCRecord:
 @dataclass
 class ValidationResult:
     """Result of pre-anchor validation."""
+
     valid: bool
     errors: List[str] = field(default_factory=list)
     warnings: List[str] = field(default_factory=list)
@@ -177,6 +180,7 @@ class ValidationResult:
 @dataclass
 class AnchorResult:
     """Result of anchoring operation."""
+
     success: bool
     anchor_id: Optional[str] = None
     chain_ref: Optional[str] = None
@@ -188,6 +192,7 @@ class AnchorResult:
 @dataclass
 class InclusionProof:
     """Proof that a record is included in the chain."""
+
     record_id: str
     anchor_id: str
     block_number: int
@@ -441,7 +446,6 @@ class NatLangChainExporter:
 
     def to_nlc_format(self, entry: "LedgerEntry") -> NLCRecord:
         """Convert a ledger entry to NatLangChain record."""
-        from .core import LedgerEntry
 
         # Generate prose entry
         prose = self.to_prose_entry(entry)
@@ -470,7 +474,6 @@ class NatLangChainExporter:
 
         The prose forms the immutable substrate of the chain.
         """
-        from .core import LedgerEntry
 
         vec = entry.value_vector
         status_text = {
@@ -665,8 +668,7 @@ Timestamp: {time.time():.0f}
 
         # Check for intent mention
         if original.intent_summary and any(
-            word in paraphrase.lower()
-            for word in original.intent_summary.lower().split()[:5]
+            word in paraphrase.lower() for word in original.intent_summary.lower().split()[:5]
         ):
             score += 0.3
         else:
@@ -690,7 +692,6 @@ def anchor_receipt_to_nlc(
 
     Uses effort_summary as the canonical prose for Proof of Understanding.
     """
-    from .receipt import EffortReceipt
 
     client = nlc_client or NLCClient()
     exporter = NatLangChainExporter(client)

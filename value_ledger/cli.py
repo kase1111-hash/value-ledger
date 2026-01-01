@@ -8,7 +8,6 @@ Phase 1 - 17.8: query, export, stats commands
 import json
 import csv
 import sys
-from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
@@ -117,24 +116,42 @@ class LedgerCLI:
     def _export_csv(self, entries, output_path: str) -> None:
         with open(output_path, "w", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow([
-                "id", "timestamp", "intent_id", "status",
-                "t", "e", "n", "f", "r", "s", "total",
-                "content_hash", "merkle_ref"
-            ])
+            writer.writerow(
+                [
+                    "id",
+                    "timestamp",
+                    "intent_id",
+                    "status",
+                    "t",
+                    "e",
+                    "n",
+                    "f",
+                    "r",
+                    "s",
+                    "total",
+                    "content_hash",
+                    "merkle_ref",
+                ]
+            )
             for entry in entries:
                 v = entry.value_vector
-                writer.writerow([
-                    entry.id,
-                    format_timestamp(entry.timestamp),
-                    entry.intent_id,
-                    entry.status,
-                    f"{v.t:.2f}", f"{v.e:.2f}", f"{v.n:.2f}",
-                    f"{v.f:.2f}", f"{v.r:.2f}", f"{v.s:.2f}",
-                    f"{v.total():.2f}",
-                    entry.proof.content_hash or "",
-                    entry.proof.merkle_ref or "",
-                ])
+                writer.writerow(
+                    [
+                        entry.id,
+                        format_timestamp(entry.timestamp),
+                        entry.intent_id,
+                        entry.status,
+                        f"{v.t:.2f}",
+                        f"{v.e:.2f}",
+                        f"{v.n:.2f}",
+                        f"{v.f:.2f}",
+                        f"{v.r:.2f}",
+                        f"{v.s:.2f}",
+                        f"{v.total():.2f}",
+                        entry.proof.content_hash or "",
+                        entry.proof.merkle_ref or "",
+                    ]
+                )
 
     def _export_merkle(self, output_path: str) -> None:
         data = {
@@ -183,28 +200,34 @@ class LedgerCLI:
         intent_values = {}
         for e in entries:
             if e.status == "active":
-                intent_values[e.intent_id] = intent_values.get(e.intent_id, 0) + e.value_vector.total()
+                intent_values[e.intent_id] = (
+                    intent_values.get(e.intent_id, 0) + e.value_vector.total()
+                )
         top_intents = sorted(intent_values.items(), key=lambda x: x[1], reverse=True)[:5]
 
         print("\n" + "=" * 60)
         print("VALUE LEDGER STATISTICS")
         print("=" * 60)
 
-        print(f"\n📊 OVERVIEW")
+        print("\n📊 OVERVIEW")
         print(f"   Total Entries: {total}")
         print(f"   Unique Intents: {len(intents)}")
-        print(f"   Merkle Root: {self.ledger.get_merkle_root()[:16]}..." if self.ledger.get_merkle_root() else "   Merkle Root: None")
+        print(
+            f"   Merkle Root: {self.ledger.get_merkle_root()[:16]}..."
+            if self.ledger.get_merkle_root()
+            else "   Merkle Root: None"
+        )
 
-        print(f"\n📈 STATUS BREAKDOWN")
+        print("\n📈 STATUS BREAKDOWN")
         for status, count in sorted(by_status.items()):
             pct = (count / total) * 100
             print(f"   {status}: {count} ({pct:.1f}%)")
 
-        print(f"\n💰 VALUE SUMMARY")
+        print("\n💰 VALUE SUMMARY")
         print(f"   Total Value: {total_value:.1f}")
         print(f"   Average per Entry: {avg_value:.1f}")
 
-        print(f"\n📊 VALUE BY DIMENSION")
+        print("\n📊 VALUE BY DIMENSION")
         print(f"   Time (T):         {sum_t:>8.1f}")
         print(f"   Effort (E):       {sum_e:>8.1f}")
         print(f"   Novelty (N):      {sum_n:>8.1f}")
@@ -213,12 +236,12 @@ class LedgerCLI:
         print(f"   Strategy (S):     {sum_s:>8.1f}")
         print(f"   Reusability (U):  {sum_u:>8.1f}")
 
-        print(f"\n⏰ TIME RANGE")
+        print("\n⏰ TIME RANGE")
         print(f"   Oldest: {format_timestamp(oldest.timestamp)}")
         print(f"   Newest: {format_timestamp(newest.timestamp)}")
 
         if top_intents:
-            print(f"\n🏆 TOP INTENTS BY VALUE")
+            print("\n🏆 TOP INTENTS BY VALUE")
             for intent, value in top_intents:
                 print(f"   {intent[:30]}: {value:.1f}")
 
@@ -245,14 +268,14 @@ class LedgerCLI:
         print(f"ENTRY: {entry.id}")
         print(f"{'='*60}")
 
-        print(f"\n📋 BASIC INFO")
+        print("\n📋 BASIC INFO")
         print(f"   Intent ID:  {entry.intent_id}")
         print(f"   Timestamp:  {format_timestamp(entry.timestamp)}")
         print(f"   Status:     {entry.status}")
         if entry.memory_hash:
             print(f"   Memory Hash: {entry.memory_hash}")
 
-        print(f"\n💰 VALUE VECTOR")
+        print("\n💰 VALUE VECTOR")
         v = entry.value_vector
         print(f"   Time (T):         {v.t:>6.2f}")
         print(f"   Effort (E):       {v.e:>6.2f}")
@@ -261,28 +284,30 @@ class LedgerCLI:
         print(f"   Risk (R):         {v.r:>6.2f}")
         print(f"   Strategy (S):     {v.s:>6.2f}")
         print(f"   Reusability (U):  {v.u:>6.2f}")
-        print(f"   ─────────────────────")
+        print("   ─────────────────────")
         print(f"   TOTAL:            {v.total():>6.2f}")
 
-        print(f"\n🔐 PROOF DATA")
+        print("\n🔐 PROOF DATA")
         print(f"   Content Hash:    {entry.proof.content_hash or 'None'}")
         print(f"   Timestamp Proof: {entry.proof.timestamp_proof or 'None'}")
         print(f"   Merkle Ref:      {entry.proof.merkle_ref or 'None'}")
 
         if entry.status == "revoked":
-            print(f"\n⛔ REVOCATION INFO")
-            print(f"   Revoked At: {format_timestamp(entry.revoked_at) if entry.revoked_at else 'N/A'}")
+            print("\n⛔ REVOCATION INFO")
+            print(
+                f"   Revoked At: {format_timestamp(entry.revoked_at) if entry.revoked_at else 'N/A'}"
+            )
             print(f"   Revoked By: {entry.revoked_by or 'N/A'}")
             print(f"   Reason:     {entry.revocation_reason or 'N/A'}")
 
         if entry.parent_id:
-            print(f"\n🔗 LINEAGE")
+            print("\n🔗 LINEAGE")
             print(f"   Parent ID: {entry.parent_id}")
             chain = self.ledger.get_chain(entry.id)
             print(f"   Chain Length: {len(chain)}")
 
         if entry.metadata:
-            print(f"\n📎 METADATA")
+            print("\n📎 METADATA")
             for key, value in entry.metadata.items():
                 print(f"   {key}: {value}")
 
@@ -318,7 +343,8 @@ class LedgerCLI:
 
 def print_usage():
     """Print CLI usage information."""
-    print("""
+    print(
+        """
 Value Ledger CLI - Admin Commands
 
 Usage: python -m value_ledger.cli <command> [options]
@@ -356,14 +382,13 @@ Examples:
   python -m value_ledger.cli export output.json --format json
   python -m value_ledger.cli show abc123
   python -m value_ledger.cli revoke abc123 --reason "Duplicate entry"
-""")
+"""
+    )
 
 
 def demo():
     """Run demo to create sample data."""
     from .core import ValueLedger
-    from .heuristics import ScoringContext
-    import time
 
     print("=== Value Ledger Demo ===\n")
 
@@ -416,7 +441,7 @@ def main():
     if "--ledger" in args:
         idx = args.index("--ledger")
         ledger_path = args[idx + 1]
-        args = args[:idx] + args[idx + 2:]
+        args = args[:idx] + args[idx + 2 :]
 
     command = args[0]
     args = args[1:]

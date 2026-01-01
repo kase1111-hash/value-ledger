@@ -39,6 +39,7 @@ from value_ledger.receipt import (
 # Test Fixtures
 # =============================================================================
 
+
 @pytest.fixture
 def sample_receipt():
     """Create a sample receipt for testing."""
@@ -64,6 +65,7 @@ def sample_receipt():
 # =============================================================================
 # MP-01 Proposal Tests
 # =============================================================================
+
 
 class TestMP01Proposal:
     """Tests for MP-01 negotiation proposals."""
@@ -203,6 +205,7 @@ class TestMP01Formatter:
 # =============================================================================
 # License Manager Tests
 # =============================================================================
+
 
 class TestLicenseReference:
     """Tests for license references."""
@@ -385,6 +388,7 @@ class TestLicenseManager:
 # Audit Exporter Tests
 # =============================================================================
 
+
 class TestAuditExporter:
     """Tests for audit format exports."""
 
@@ -474,6 +478,7 @@ class TestAuditExporter:
 # Protocol Adapter Tests
 # =============================================================================
 
+
 class TestProtocolAdapter:
     """Tests for cross-protocol adapter."""
 
@@ -521,6 +526,7 @@ class TestProtocolAdapter:
 # Convenience Function Tests
 # =============================================================================
 
+
 class TestConvenienceFunctions:
     """Tests for module-level convenience functions."""
 
@@ -543,6 +549,7 @@ class TestConvenienceFunctions:
 # =============================================================================
 # Integration Tests
 # =============================================================================
+
 
 class TestCompatibilityIntegration:
     """Integration tests for external compatibility."""
@@ -590,14 +597,10 @@ class TestCompatibilityIntegration:
         )
 
         # Delegate to user2
-        adapter.licenses.delegate_license(
-            license_ref.license_id, "user1", "user2"
-        )
+        adapter.licenses.delegate_license(license_ref.license_id, "user1", "user2")
 
         # Check access
-        has_access, _ = adapter.licenses.check_license(
-            license_ref.license_id, "user2"
-        )
+        has_access, _ = adapter.licenses.check_license(license_ref.license_id, "user2")
 
         assert has_access is True
 

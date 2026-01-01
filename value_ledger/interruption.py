@@ -32,20 +32,22 @@ logger = logging.getLogger("value_ledger.interruption")
 # Set up a default handler if none exists (for standalone use)
 if not logger.handlers:
     _handler = logging.StreamHandler()
-    _handler.setFormatter(logging.Formatter(
-        "[%(asctime)s] %(levelname)s [%(name)s] %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
-    ))
+    _handler.setFormatter(
+        logging.Formatter(
+            "[%(asctime)s] %(levelname)s [%(name)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        )
+    )
     logger.addHandler(_handler)
     logger.setLevel(logging.DEBUG)
 
 
 class InterruptionType(Enum):
     """Types of interruptions tracked by Boundary Daemon."""
-    EXTERNAL = "external"           # External notification, alert, etc.
+
+    EXTERNAL = "external"  # External notification, alert, etc.
     CONTEXT_SWITCH = "context_switch"  # Changed application/task focus
-    SELF = "self"                   # User-initiated break
-    FOCUS_LOST = "focus_lost"       # Lost focus (unfocused window, etc.)
+    SELF = "self"  # User-initiated break
+    FOCUS_LOST = "focus_lost"  # Lost focus (unfocused window, etc.)
     FOCUS_REGAINED = "focus_regained"  # Regained focus after interruption
 
 
@@ -62,6 +64,7 @@ class InterruptionEvent:
         duration: How long the interruption lasted (seconds), None if ongoing
         metadata: Additional context about the interruption
     """
+
     intent_id: str
     timestamp: float
     interruption_type: InterruptionType
@@ -77,6 +80,7 @@ class InterruptionSummary:
 
     Returned when a session ends to provide scoring context.
     """
+
     intent_id: str
     total_count: int
     weighted_count: float
@@ -173,16 +177,13 @@ class InterruptionTracker:
 
         # Auto-start session if not exists (graceful handling)
         if intent_id not in self.active_sessions:
-            logger.warning(
-                f"Session not found for intent_id={intent_id}, auto-starting session"
-            )
+            logger.warning(f"Session not found for intent_id={intent_id}, auto-starting session")
             self.start_session(intent_id)
 
         self.active_sessions[intent_id]["events"].append(event)
         event_count = len(self.active_sessions[intent_id]["events"])
         logger.debug(
-            f"Interruption recorded: intent_id={intent_id}, "
-            f"total_events={event_count}"
+            f"Interruption recorded: intent_id={intent_id}, " f"total_events={event_count}"
         )
 
     def get_interruption_count(self, intent_id: str) -> int:
@@ -200,10 +201,7 @@ class InterruptionTracker:
             return 0
 
         events = self.active_sessions[intent_id]["events"]
-        count = sum(
-            1 for e in events
-            if e.interruption_type != InterruptionType.FOCUS_REGAINED
-        )
+        count = sum(1 for e in events if e.interruption_type != InterruptionType.FOCUS_REGAINED)
         logger.debug(f"get_interruption_count: intent_id={intent_id}, count={count}")
         return count
 
@@ -225,14 +223,13 @@ class InterruptionTracker:
             Weighted sum of interruptions
         """
         if intent_id not in self.active_sessions:
-            logger.debug(f"get_weighted_interruptions: intent_id={intent_id} not found, returning 0.0")
+            logger.debug(
+                f"get_weighted_interruptions: intent_id={intent_id} not found, returning 0.0"
+            )
             return 0.0
 
         events = self.active_sessions[intent_id]["events"]
-        weighted = sum(
-            self.TYPE_WEIGHTS.get(e.interruption_type, 1.0)
-            for e in events
-        )
+        weighted = sum(self.TYPE_WEIGHTS.get(e.interruption_type, 1.0) for e in events)
         logger.debug(f"get_weighted_interruptions: intent_id={intent_id}, weighted={weighted:.3f}")
         return weighted
 
@@ -252,9 +249,7 @@ class InterruptionTracker:
         logger.info(f"Ending session: intent_id={intent_id}")
 
         if intent_id not in self.active_sessions:
-            logger.warning(
-                f"end_session: intent_id={intent_id} not found, returning empty summary"
-            )
+            logger.warning(f"end_session: intent_id={intent_id} not found, returning empty summary")
             # Return empty summary for unknown sessions
             return InterruptionSummary(
                 intent_id=intent_id,
@@ -288,13 +283,9 @@ class InterruptionTracker:
         total_time = sum(e.duration or 0.0 for e in events)
 
         total_count = sum(
-            1 for e in events
-            if e.interruption_type != InterruptionType.FOCUS_REGAINED
+            1 for e in events if e.interruption_type != InterruptionType.FOCUS_REGAINED
         )
-        weighted_count = sum(
-            self.TYPE_WEIGHTS.get(e.interruption_type, 1.0)
-            for e in events
-        )
+        weighted_count = sum(self.TYPE_WEIGHTS.get(e.interruption_type, 1.0) for e in events)
 
         summary = InterruptionSummary(
             intent_id=intent_id,
@@ -434,15 +425,11 @@ class BoundaryDaemonListener:
                 intent_id = self.active_intent_resolver()
                 logger.debug(f"Resolver returned intent_id={intent_id}")
             except Exception as e:
-                logger.error(
-                    f"active_intent_resolver raised exception: {type(e).__name__}: {e}"
-                )
+                logger.error(f"active_intent_resolver raised exception: {type(e).__name__}: {e}")
                 intent_id = None
 
         if not intent_id:
-            logger.debug(
-                f"No intent_id available, ignoring event: type={event_type}"
-            )
+            logger.debug(f"No intent_id available, ignoring event: type={event_type}")
             return None
 
         # Create interruption event
@@ -551,12 +538,14 @@ class MockBoundaryEmitter:
         timestamp: Optional[float] = None,
     ) -> None:
         """Convenience method to emit a notification event."""
-        self.emit_event({
-            "type": "notification_received",
-            "intent_id": intent_id,
-            "source": source,
-            "timestamp": timestamp or time.time(),
-        })
+        self.emit_event(
+            {
+                "type": "notification_received",
+                "intent_id": intent_id,
+                "source": source,
+                "timestamp": timestamp or time.time(),
+            }
+        )
 
     def emit_context_switch(
         self,
@@ -566,13 +555,15 @@ class MockBoundaryEmitter:
         timestamp: Optional[float] = None,
     ) -> None:
         """Convenience method to emit a context switch event."""
-        self.emit_event({
-            "type": "context_switch",
-            "intent_id": intent_id,
-            "source": f"{from_app} -> {to_app}",
-            "timestamp": timestamp or time.time(),
-            "metadata": {"from_app": from_app, "to_app": to_app},
-        })
+        self.emit_event(
+            {
+                "type": "context_switch",
+                "intent_id": intent_id,
+                "source": f"{from_app} -> {to_app}",
+                "timestamp": timestamp or time.time(),
+                "metadata": {"from_app": from_app, "to_app": to_app},
+            }
+        )
 
     def emit_focus_lost(
         self,
@@ -580,11 +571,13 @@ class MockBoundaryEmitter:
         timestamp: Optional[float] = None,
     ) -> None:
         """Convenience method to emit a focus lost event."""
-        self.emit_event({
-            "type": "focus_lost",
-            "intent_id": intent_id,
-            "timestamp": timestamp or time.time(),
-        })
+        self.emit_event(
+            {
+                "type": "focus_lost",
+                "intent_id": intent_id,
+                "timestamp": timestamp or time.time(),
+            }
+        )
 
     def emit_focus_regained(
         self,
@@ -593,12 +586,14 @@ class MockBoundaryEmitter:
         timestamp: Optional[float] = None,
     ) -> None:
         """Convenience method to emit a focus regained event."""
-        self.emit_event({
-            "type": "focus_regained",
-            "intent_id": intent_id,
-            "duration": duration,
-            "timestamp": timestamp or time.time(),
-        })
+        self.emit_event(
+            {
+                "type": "focus_regained",
+                "intent_id": intent_id,
+                "duration": duration,
+                "timestamp": timestamp or time.time(),
+            }
+        )
 
 
 def calculate_effort_factor(

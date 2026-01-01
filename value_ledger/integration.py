@@ -6,7 +6,6 @@ Listens for intent lifecycle events and automatically accrues value using heuris
 
 from __future__ import annotations
 
-import time
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
@@ -17,16 +16,19 @@ from .heuristics import ScoringContext, HeuristicEngine
 @dataclass
 class IntentEvent:
     """Standardized event payload from IntentLog"""
+
     event_type: str  # "intent_started", "intent_updated", "intent_completed", "intent_abandoned"
     intent_id: str
     timestamp: float
-    human_reasoning: Optional[str] = None          # Raw human intent description
-    agent_output: Optional[str] = None             # Final AI response or result
-    memory_hash: Optional[str] = None              # From Memory Vault after encryption
-    interruptions: int = 0                         # Tracked by Boundary Daemon
+    human_reasoning: Optional[str] = None  # Raw human intent description
+    agent_output: Optional[str] = None  # Final AI response or result
+    memory_hash: Optional[str] = None  # From Memory Vault after encryption
+    interruptions: int = 0  # Tracked by Boundary Daemon
     keystrokes: Optional[int] = None
-    outcome_tags: Optional[list[str]] = None       # e.g., ["success", "failure", "partial", "breakthrough"]
-    risk_level: Optional[float] = None             # 0.0–1.0
+    outcome_tags: Optional[list[str]] = (
+        None  # e.g., ["success", "failure", "partial", "breakthrough"]
+    )
+    risk_level: Optional[float] = None  # 0.0–1.0
     metadata: Optional[Dict[str, Any]] = None
 
 
@@ -105,7 +107,9 @@ class IntentLogConnector:
             "event_type": event.event_type,
             "outcome_tags": event.outcome_tags,
             "source": "IntentLog",
-            "raw_content_for_novelty": content_for_analysis if mv_hook.can_access_content(event.intent_id) else None,
+            "raw_content_for_novelty": (
+                content_for_analysis if mv_hook.can_access_content(event.intent_id) else None
+            ),
             **(event.metadata or {}),
         }
 
@@ -126,6 +130,7 @@ class IntentLogConnector:
 # ———————————————————————————————
 # Hook for external systems (e.g., Agent-OS core)
 # ———————————————————————————————
+
 
 def create_intentlog_listener(ledger_path: str = "ledger.jsonl") -> IntentLogConnector:
     """

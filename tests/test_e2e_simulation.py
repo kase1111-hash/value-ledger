@@ -149,6 +149,7 @@ class EndToEndSimulation:
 
         # Capture 15-25 signals with natural variance
         import random
+
         num_signals = random.randint(15, 25)
 
         for i in range(num_signals):
@@ -197,9 +198,7 @@ class EndToEndSimulation:
 
     def _step_validate_segments(self, results: dict):
         """Validate segments with enhanced validator."""
-        validator = create_enhanced_validator(
-            validator_id=f"validator_{self.run_id}"
-        )
+        validator = create_enhanced_validator(validator_id=f"validator_{self.run_id}")
 
         for segment in self.segments:
             report = validator.validate(segment)
@@ -218,7 +217,9 @@ class EndToEndSimulation:
         valid_count = sum(1 for r in self.validation_reports if r.valid)
         results["metrics"]["segments_validated"] = len(self.validation_reports)
         results["metrics"]["segments_valid"] = valid_count
-        results["metrics"]["avg_score"] = sum(r.overall_score for r in self.validation_reports) / len(self.validation_reports)
+        results["metrics"]["avg_score"] = sum(
+            r.overall_score for r in self.validation_reports
+        ) / len(self.validation_reports)
         results["steps_completed"].append("validate_segments")
 
     def _step_generate_receipts(self, results: dict):
@@ -320,9 +321,7 @@ class EndToEndSimulation:
             assert has_access is True
 
             # Verify unauthorized access denied
-            no_access, reason = manager.check_license(
-                license_ref.license_id, "unauthorized_entity"
-            )
+            no_access, reason = manager.check_license(license_ref.license_id, "unauthorized_entity")
             assert no_access is False
 
         results["metrics"]["licenses_created"] = licenses_created
@@ -398,7 +397,9 @@ class TestEndToEndSimulation:
             "verify_ledger",
         ]
         for step in expected_steps:
-            assert step in results["steps_completed"], f"Step '{step}' not completed in run {run_id}"
+            assert (
+                step in results["steps_completed"]
+            ), f"Step '{step}' not completed in run {run_id}"
 
         # Verify metrics
         assert results["metrics"]["signals_captured"] >= 15
@@ -411,7 +412,9 @@ class TestEndToEndSimulation:
         print(f"  Signals: {results['metrics']['signals_captured']}")
         print(f"  Segments: {results['metrics']['segments_created']}")
         print(f"  Avg Score: {results['metrics']['avg_score']:.3f}")
-        print(f"  Valid Segments: {results['metrics']['segments_valid']}/{results['metrics']['segments_validated']}")
+        print(
+            f"  Valid Segments: {results['metrics']['segments_valid']}/{results['metrics']['segments_validated']}"
+        )
 
 
 def test_simulation_stress():
