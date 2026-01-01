@@ -20,6 +20,25 @@ This module is part of a larger 9-module system building Agent-OS, a natural-lan
 
 **Important:** This ledger is not a cryptocurrency, token system, or speculative market. It is purely evidentiary — designed for proof, audit, and fair attribution in human-AI collaboration.
 
+## Architecture
+
+The Value Ledger comprises 13 Python modules (~7,825 lines of code):
+
+| Module | Purpose |
+|--------|---------|
+| `core.py` | Main ValueLedger class, entry management, Merkle proofs |
+| `cli.py` | Command-line interface (7 commands) |
+| `heuristics.py` | 7 scoring algorithms with embedding-based novelty |
+| `integration.py` | IntentLog event-driven integration |
+| `interruption.py` | Boundary Daemon interruption tracking |
+| `receipt.py` | MP-02 Effort Receipt Protocol |
+| `privacy.py` | Privacy controls, consent management, encryption |
+| `validation.py` | Enhanced validation criteria (6 assessment types) |
+| `compatibility.py` | MP-01 negotiation, licensing, audit export |
+| `natlangchain.py` | NatLangChain export with SSRF protection |
+| `synth_mind.py` | Cognitive tier tracking (4 tiers) |
+| `memory_vault_hook.py` | Memory Vault integration (stubbed) |
+
 ## Documentation
 
 | Document | Description |
@@ -33,21 +52,23 @@ This module is part of a larger 9-module system building Agent-OS, a natural-lan
 
 **Version 0.5.0** - Core implementation complete with advanced features.
 
-Implemented features:
-- 7-dimensional value vector (T/E/N/F/R/S/U)
-- Proof system with Merkle trees
-- Multi-parent aggregation
-- Failure mode handling
-- Admin CLI (query, export, stats, revoke)
-- IntentLog integration
-- Boundary Daemon integration
-- Synth-Mind integration
-- NatLangChain export
-- MP-02 Effort Receipts
-- MP-02 Privacy & Agency Controls
-- MP-02 External Compatibility (license management, audit export)
-- Enhanced Validation Criteria (coherence, progression, consistency, authenticity, completeness)
-- Security hardening (SSRF protection, path traversal prevention)
+### Implemented Features
+
+| Category | Features |
+|----------|----------|
+| **Core** | 7-dimensional value vector (T/E/N/F/R/S/U), Merkle tree proofs, multi-parent aggregation |
+| **Scoring** | 7 heuristic scorers including embedding-based novelty (`all-MiniLM-L6-v2`) |
+| **Failure Handling** | Clock drift detection, source validation, unified failure mode handler |
+| **CLI** | 7 commands: stats, query, show, export, revoke, proof, demo |
+| **MP-02 Protocol** | Effort receipts, privacy/agency controls, enhanced validation |
+| **Integrations** | IntentLog, Boundary Daemon, Synth-Mind, NatLangChain |
+| **Security** | SSRF protection, path traversal prevention, Fernet encryption |
+| **Export Formats** | JSON, CSV, Merkle, JSON-LD, W3C Verifiable Credentials, OpenTimestamps |
+
+### Stubbed (Awaiting External Modules)
+
+- Memory Vault integration - graceful degradation when unavailable
+- Learning Contracts consent checking - placeholder for future integration
 
 ## Installation
 
@@ -58,8 +79,13 @@ Implemented features:
 
 ### Dependencies
 
+**Required:**
 - `pydantic>=2.0` - Data validation
 - `cryptography>=41.0` - Cryptographic operations
+
+**Optional (for embedding-based novelty scoring):**
+- `sentence-transformers` - Semantic similarity embeddings
+- `torch` - PyTorch for GPU acceleration
 
 ### From Source (Development)
 
@@ -99,6 +125,9 @@ python -m value_ledger.cli demo
 
 # Run tests
 pytest tests/
+
+# Run tests with coverage
+pytest tests/ --cov=value_ledger
 ```
 
 ### Troubleshooting
@@ -106,6 +135,17 @@ pytest tests/
 **Import Errors:** Ensure pydantic is installed: `pip install pydantic>=2.0`
 
 **Permission Issues:** Ensure write permissions: `chmod 755 ~/.agent-os/`
+
+**Embedding Model Issues:** If novelty scoring fails, install optional dependencies:
+```bash
+pip install sentence-transformers torch
+```
+The embedding model (`all-MiniLM-L6-v2`) downloads on first use (~90MB).
+
+**Cryptography Issues:** If encryption fails, ensure cryptography is properly installed:
+```bash
+pip install cryptography>=41.0
+```
 
 ## License
 

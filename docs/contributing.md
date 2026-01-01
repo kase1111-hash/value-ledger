@@ -12,8 +12,13 @@ Thank you for your interest in contributing to Value Ledger! This document cover
 
 ### Dependencies
 
+**Required:**
 - `pydantic>=2.0` - Data validation
 - `cryptography>=41.0` - Cryptographic operations
+
+**Optional (for embedding-based novelty scoring):**
+- `sentence-transformers` - Semantic similarity embeddings
+- `torch` - PyTorch for GPU acceleration
 
 ### From Source
 
@@ -44,22 +49,35 @@ This includes:
 
 ```
 value-ledger/
-├── value_ledger/          # Main package
-│   ├── __init__.py
-│   ├── core.py            # Core ValueLedger class
-│   ├── cli.py             # Command-line interface
-│   ├── heuristics.py      # Scoring heuristics
-│   ├── integration.py     # IntentLog integration
-│   ├── interruption.py    # Boundary Daemon integration
-│   ├── memory_vault_hook.py
-│   ├── natlangchain.py    # NatLangChain export
-│   ├── receipt.py         # MP-02 Effort Receipts
-│   └── synth_mind.py      # Synth-Mind integration
-├── tests/                 # Test suite
-├── docs/                  # Documentation
-├── LICENSE
-├── README.md
-└── pyproject.toml
+├── value_ledger/              # Main package (~7,825 lines)
+│   ├── __init__.py            # Package exports (100+ classes/functions)
+│   ├── core.py                # Core ValueLedger class (1,196 lines)
+│   ├── cli.py                 # Command-line interface (533 lines)
+│   ├── heuristics.py          # 7 scoring heuristics (357 lines)
+│   ├── integration.py         # IntentLog integration (135 lines)
+│   ├── interruption.py        # Boundary Daemon integration (700 lines)
+│   ├── memory_vault_hook.py   # Memory Vault hook (165 lines, stubbed)
+│   ├── natlangchain.py        # NatLangChain export (721 lines)
+│   ├── receipt.py             # MP-02 Effort Receipts (647 lines)
+│   ├── privacy.py             # Privacy & consent controls (793 lines)
+│   ├── validation.py          # Enhanced validation criteria (994 lines)
+│   ├── compatibility.py       # MP-02 external compatibility (966 lines)
+│   └── synth_mind.py          # Synth-Mind integration (403 lines)
+├── tests/                     # Test suite (5 test files)
+│   ├── test_validation.py     # Enhanced validation tests
+│   ├── test_compatibility.py  # Compatibility & licensing tests
+│   ├── test_interruption.py   # Interruption tracking tests
+│   ├── test_privacy.py        # Privacy & consent tests
+│   └── test_e2e_simulation.py # End-to-end workflow tests
+├── docs/                      # Documentation
+│   ├── specs-sheet.md         # Complete specification
+│   ├── user-manual.md         # CLI and API usage
+│   ├── contributing.md        # This file
+│   └── code-of-conduct.md     # Community standards
+├── LICENSE                    # GPL-3.0-only
+├── README.md                  # Project overview
+├── pyproject.toml             # Python project configuration
+└── build.bat                  # Windows build script
 ```
 
 ### Storage Configuration
@@ -254,24 +272,41 @@ Fixes #123
 
 ### Core Modules
 
-| Module | Purpose |
-|--------|---------|
-| `core.py` | ValueLedger class, entry management |
-| `heuristics.py` | Scoring algorithms |
-| `integration.py` | IntentLog connection |
-| `interruption.py` | Boundary Daemon integration |
-| `receipt.py` | MP-02 Effort Receipts |
-| `natlangchain.py` | NatLangChain export |
-| `synth_mind.py` | Synth-Mind integration |
-| `cli.py` | Command-line interface |
+| Module | Purpose | Lines |
+|--------|---------|-------|
+| `core.py` | ValueLedger class, entry management, Merkle proofs | 1,196 |
+| `cli.py` | Command-line interface (7 commands) | 533 |
+| `heuristics.py` | 7 scoring algorithms with embedding-based novelty | 357 |
+| `integration.py` | IntentLog event-driven connection | 135 |
+| `interruption.py` | Boundary Daemon integration | 700 |
+| `receipt.py` | MP-02 Effort Receipts | 647 |
+| `privacy.py` | Privacy controls, consent, encryption | 793 |
+| `validation.py` | Enhanced validation criteria (6 types) | 994 |
+| `compatibility.py` | MP-01 negotiation, licensing, audit export | 966 |
+| `natlangchain.py` | NatLangChain export with SSRF protection | 721 |
+| `synth_mind.py` | Synth-Mind cognitive tier integration | 403 |
+| `memory_vault_hook.py` | Memory Vault integration (stubbed) | 165 |
 
 ### Key Classes
 
 - `ValueLedger` - Main ledger management
 - `LedgerEntry` - Individual entry records
 - `ValueVector` - 7-dimensional value representation
-- `HeuristicEngine` - Auto-scoring system
+- `HeuristicEngine` - Auto-scoring system with 7 scorers
 - `MerkleTree` - Cryptographic proofs
+- `EffortReceipt` - MP-02 effort receipt structure
+- `SignalEncryptor` - Fernet-based signal encryption
+- `EnhancedValidator` - Multi-criteria validation
+- `LicenseManager` - License grant/revoke/delegate
+- `AuditExporter` - Export to JSON-LD, W3C-VC, OpenTimestamps
+
+### Security Classes
+
+- `ClockMonitor` - Detects clock drift and manipulation
+- `SourceValidator` - Validates entry integrity
+- `FailureModeHandler` - Unified failure handling
+- `PrivacyFilter` - Content filtering by privacy level
+- `ConsentRegistry` - Consent management
 
 ## Adding New Features
 
