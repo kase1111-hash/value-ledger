@@ -1,0 +1,72 @@
+services:
+  # Production service - minimal image
+  value-ledger:
+    build:
+      context: .
+      target: production
+    volumes:
+      - ledger-data:/data
+    environment:
+      - LEDGER_PATH=/data/ledger.jsonl
+    command: ["stats"]
+
+  # Development service - with dev dependencies
+  dev:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+      - dev-venv:/opt/venv
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: ["pytest", "tests/", "-v"]
+
+  # Run tests
+  test:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+    command: ["pytest", "tests/", "-v", "--cov=value_ledger", "--cov-report=term-missing"]
+
+  # Lint check
+  lint:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+    command: ["sh", "-c", "ruff check value_ledger/ && black --check value_ledger/ tests/"]
+
+  # With embeddings support for ML-based novelty scoring
+  embeddings:
+    build:
+      context: .
+      target: embeddings
+    volumes:
+      - ledger-data:/data
+      - model-cache:/home/appuser/.cache
+    environment:
+      - LEDGER_PATH=/data/ledger.jsonl
+      - TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface
+    command: ["demo"]
+
+  # Interactive CLI session
+  cli:
+    build:
+      context: .
+      target: production
+    volumes:
+      - ledger-data:/data
+    environment:
+      - LEDGER_PATH=/data/ledger.jsonl
+    stdin_open: true
+    tty: true
+    entrypoint: ["python", "-m", "value_ledger.cli"]
+
+volumes:
+  ledger-data:
+  dev-venv:
+  model-cache:
