@@ -750,7 +750,7 @@ Past receipts remain immutable.
 - **Test files:** 5 test modules
 - **Dependencies:** pydantic (required), cryptography (required), sentence-transformers (optional), torch (optional)
 
-## Implemented Features (v0.5.0)
+## Implemented Features (v0.1.0-alpha)
 
 | Feature | Module | Status | Lines |
 |---------|--------|--------|-------|
@@ -765,6 +765,7 @@ Past receipts remain immutable.
 | External Compatibility | `compatibility.py` | ✅ Implemented | 966 |
 | NatLangChain Export | `natlangchain.py` | ✅ Implemented | 721 |
 | Synth-Mind Integration | `synth_mind.py` | ✅ Implemented | 403 |
+| Security Integration | `security.py` | ✅ Implemented | 1,000 |
 | Memory Vault Hook | `memory_vault_hook.py` | ⚠️ Stubbed | 165 |
 
 ## Security Features
@@ -780,13 +781,15 @@ Past receipts remain immutable.
 
 ## Test Coverage
 
-| Test File | Focus |
-|-----------|-------|
-| `test_validation.py` | Enhanced validation criteria |
-| `test_compatibility.py` | MP-02 compatibility, licensing, audit |
-| `test_interruption.py` | Interruption tracking |
-| `test_privacy.py` | Privacy & consent controls |
-| `test_e2e_simulation.py` | End-to-end workflows |
+| Test File | Focus | Tests |
+|-----------|-------|-------|
+| `test_validation.py` | Enhanced validation criteria | 58 |
+| `test_compatibility.py` | MP-02 compatibility, licensing, audit | 35 |
+| `test_interruption.py` | Interruption tracking | 29 |
+| `test_privacy.py` | Privacy & consent controls | 31 |
+| `test_e2e_simulation.py` | End-to-end workflows | 11 |
+| `test_security.py` | Security integration, SIEM, Daemon | 47 |
+| **Total** | | **211** |
 
 ---
 
@@ -794,8 +797,4 @@ Past receipts remain immutable.
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.1.0 | 2024 | Initial specification |
-| 0.2.0 | 2024 | Added NatLangChain compatibility |
-| 0.3.0 | 2024 | Added Boundary Daemon integration, MP-02 Privacy & Agency Controls |
-| 0.4.0 | 2024 | Added MP-02 External Compatibility (MP-01, licensing, audit formats) |
-| 0.5.0 | 2024 | Added Enhanced Validation Criteria, security hardening, consolidated spec docs |
+| 0.1.0-alpha.1 | 2026-01-01 | First public alpha release with full feature set, CI/CD, Docker, security integration |

@@ -5,118 +5,117 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0-alpha.1] - 2026-01-01
 
-### Added
-- GitHub Actions CI/CD pipeline with multi-Python version testing (3.9-3.12)
-- Automated security scanning with Bandit and Safety
-- Docker containerization with multi-stage builds
-- Pre-commit hooks configuration for code quality
-- Dependabot for automated dependency updates
-- Release workflow for PyPI publishing
-- pytest-cov for coverage reporting
-- CLI entry point script (`value-ledger` command)
-- Windows batch files (`assemble.bat`, `start.bat`)
-- **Security Integration Module** (`security.py`)
-  - Custom exception hierarchy (ValueLedgerError, ValidationError, SecurityError, etc.)
-  - Boundary-SIEM integration (JSON HTTP, CEF protocol)
-  - Boundary Daemon integration (policy checks, connection protection)
-  - Security event logging with hash chains
-  - `@protected_operation` decorator for audited operations
-  - `security_context` context manager
-  - 47 comprehensive tests
+First public alpha release of Value Ledger - the evidentiary accounting layer for cognitive effort in the Agent-OS ecosystem.
 
-### Changed
-- Updated pyproject.toml with comprehensive tool configurations
-- Applied Black formatting to all Python files
-- Fixed 33 linting errors (unused imports, f-string issues)
+> ⚠️ **Alpha Release**: This is an early release intended for testing and feedback. APIs may change before the stable 1.0 release.
 
-## [0.5.0] - 2024-12-01
+### Core Features
 
-### Added
-- **Core Ledger System**
-  - 7-dimensional value vector (Time, Effort, Novelty, Failure, Reusability, Strategy, Understanding)
-  - Merkle tree-based cryptographic proofs
-  - Multi-parent entry aggregation
-  - Append-only ledger with revocation (freezes, doesn't delete)
-  - JSONL storage with deterministic IDs
+- **Value Vector System**
+  - 7-dimensional value tracking: Time (T), Effort (E), Novelty (N), Failure (F), Reusability (R), Strategy (S), Understanding (U)
+  - Merkle tree-based cryptographic proofs for tamper detection
+  - Multi-parent entry aggregation for complex workflows
+  - Append-only ledger with soft revocation (freezes value, preserves history)
+  - JSONL storage with deterministic entry IDs
 
 - **CLI Interface** (7 commands)
-  - `stats` - Show ledger statistics
-  - `query` - Query entries with filters
-  - `show` - Display specific entry details
-  - `export` - Export to JSON/CSV/Merkle formats
-  - `revoke` - Revoke/freeze entry value
-  - `proof` - Generate Merkle proof
-  - `demo` - Run demo workflow
+  - `stats` - Display ledger statistics and summaries
+  - `query` - Query entries with flexible filters
+  - `show` - Display detailed entry information
+  - `export` - Export to JSON, CSV, or Merkle proof formats
+  - `revoke` - Revoke/freeze entry value with audit trail
+  - `proof` - Generate and verify Merkle proofs
+  - `demo` - Run interactive demo workflow
 
-- **Heuristic Scoring**
-  - 7 heuristic scorers
+- **Heuristic Scoring Engine**
+  - 7 pluggable scoring algorithms
   - Embedding-based novelty detection (SentenceTransformer: all-MiniLM-L6-v2)
-  - Clock drift detection
-  - Source validation
+  - Clock drift detection for temporal integrity
+  - Source validation for entry authenticity
+
+### Protocol Support
 
 - **MP-02 Effort Receipt Protocol**
-  - Effort receipts with validation metadata
+  - Structured effort receipts with validation metadata
   - Privacy & consent controls (PrivacyLevel, ConsentStatus)
-  - External compatibility (MP-01 negotiation)
   - License management (grant, revoke, delegate)
+  - Third-party verification support
 
 - **Enhanced Validation** (6 assessment types)
-  - Coherence assessment
-  - Progression assessment
-  - Consistency assessment
-  - Authenticity assessment
-  - Completeness assessment
-  - Confidence calculation
-
-- **Integrations**
-  - IntentLog (event-driven)
-  - Boundary Daemon (interruption tracking)
-  - Synth-Mind (cognitive tier tracking)
-  - NatLangChain (with SSRF protection)
-  - Memory Vault (stubbed, graceful degradation)
-
-- **Security**
-  - SSRF protection
-  - Path traversal prevention
-  - Null byte injection checks
-  - Fernet encryption for signal content
+  - Coherence, Progression, Consistency
+  - Authenticity, Completeness, Confidence scoring
 
 - **Export Formats**
   - JSON, CSV, Merkle proofs
-  - JSON-LD
+  - JSON-LD for linked data
   - W3C Verifiable Credentials
-  - OpenTimestamps
+  - OpenTimestamps compatibility
 
-- **Documentation**
-  - Comprehensive specs sheet
-  - User manual with CLI and API usage
-  - Contributing guidelines
-  - Code of conduct
+### Integrations
+
+- **Boundary Daemon** - Interruption tracking and effort multipliers
+- **Boundary-SIEM** - Security event reporting (JSON HTTP, CEF protocol)
+- **IntentLog** - Event-driven intent binding
+- **Synth-Mind** - Cognitive tier tracking (4 tiers)
+- **NatLangChain** - Natural language chain export (with SSRF protection)
+- **Memory Vault** - Encrypted memory references (stubbed, graceful degradation)
 
 ### Security
-- Path traversal prevention in ledger path validation
-- Sensitive system path blocking
-- Clock manipulation detection
 
-## [0.4.0] - 2024-11-15
+- **Security Integration Module** (`security.py`)
+  - Custom exception hierarchy for structured error handling
+  - Boundary-SIEM client with hash chain integrity
+  - Boundary Daemon client for policy enforcement
+  - `@protected_operation` decorator for audited operations
+  - `security_context` context manager
 
-### Added
-- Initial implementation of Value Ledger core
-- Basic value vector tracking
-- JSONL persistence layer
+- **Hardening**
+  - SSRF protection for external requests
+  - Path traversal prevention
+  - Null byte injection checks
+  - Fernet encryption for sensitive content
+  - Clock manipulation detection
 
-## [0.3.0] - 2024-11-01
+### Developer Experience
 
-### Added
-- Project structure and packaging
-- Basic Pydantic models
-- Initial test suite
+- **CI/CD Pipeline**
+  - GitHub Actions with Python 3.9-3.12 matrix testing
+  - Automated security scanning (Bandit, Safety)
+  - Release workflow for PyPI publishing
+  - Dependabot for dependency updates
+
+- **Containerization**
+  - Multi-stage Dockerfile (production, development, embeddings)
+  - docker-compose.yml for local development
+  - Non-root user, health checks
+
+- **Code Quality**
+  - Pre-commit hooks (Black, Ruff, Bandit, detect-secrets)
+  - 211 tests with pytest
+  - Coverage reporting with pytest-cov
+  - Type hints throughout
+
+- **Platform Support**
+  - Windows batch files (`assemble.bat`, `start.bat`)
+  - Unix/Linux/macOS support
+  - Docker for cross-platform deployment
+
+### Documentation
+
+- Comprehensive specification sheet (`docs/specs-sheet.md`)
+- User manual with CLI and API examples (`docs/user-manual.md`)
+- Contributing guidelines (`docs/contributing.md`)
+- Code of conduct (`docs/code-of-conduct.md`)
+
+### Known Limitations (Alpha)
+
+- Memory Vault integration is stubbed (awaiting external module)
+- Learning Contracts consent checking is placeholder
+- Embedding model downloads on first use (~90MB)
+- Performance not yet optimized for large ledgers (>100K entries)
 
 ---
 
-[Unreleased]: https://github.com/kase1111-hash/value-ledger/compare/v0.5.0...HEAD
-[0.5.0]: https://github.com/kase1111-hash/value-ledger/compare/v0.4.0...v0.5.0
-[0.4.0]: https://github.com/kase1111-hash/value-ledger/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/kase1111-hash/value-ledger/releases/tag/v0.3.0
+[0.1.0-alpha.1]: https://github.com/kase1111-hash/value-ledger/releases/tag/v0.1.0-alpha.1
