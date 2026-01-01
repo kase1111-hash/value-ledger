@@ -93,15 +93,9 @@ When integrated with Agent-OS:
    cd value-ledger
    ```
 
-3. Install development dependencies:
-   ```bash
-   pip install -e ".[dev]"
-   ```
-
-4. Verify setup:
-   ```bash
-   pytest tests/
-   ```
+3. Follow the [Installation instructions](../README.md#installation) in the README
+4. Install with dev dependencies: `pip install -e ".[dev]"`
+5. Verify setup: `pytest tests/`
 
 ## Development Workflow
 
