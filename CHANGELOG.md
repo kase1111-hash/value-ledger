@@ -16,6 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release workflow for PyPI publishing
 - pytest-cov for coverage reporting
 - CLI entry point script (`value-ledger` command)
+- Windows batch files (`assemble.bat`, `start.bat`)
+- **Security Integration Module** (`security.py`)
+  - Custom exception hierarchy (ValueLedgerError, ValidationError, SecurityError, etc.)
+  - Boundary-SIEM integration (JSON HTTP, CEF protocol)
+  - Boundary Daemon integration (policy checks, connection protection)
+  - Security event logging with hash chains
+  - `@protected_operation` decorator for audited operations
+  - `security_context` context manager
+  - 47 comprehensive tests
 
 ### Changed
 - Updated pyproject.toml with comprehensive tool configurations
