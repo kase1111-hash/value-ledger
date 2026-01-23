@@ -208,8 +208,9 @@ security.report_security_event(
 |----------|-------------|
 | [User Manual](docs/user-manual.md) | CLI commands and Python API usage |
 | [Specs Sheet](docs/specs-sheet.md) | Complete specification and protocols |
-| [Contributing](docs/contributing.md) | Development setup and guidelines |
+| [Contributing](CONTRIBUTING.md) | How to contribute |
 | [Code of Conduct](docs/code-of-conduct.md) | Community standards |
+| [Security Policy](SECURITY.md) | Security vulnerability reporting |
 | [Changelog](CHANGELOG.md) | Version history and changes |
 
 ## Development
