@@ -129,7 +129,7 @@ class MerkleTree:
 
     def get_proof(self, leaf_index: int) -> List[Dict[str, str]]:
         """Get Merkle proof for a leaf at given index."""
-        if leaf_index >= len(self.leaves):
+        if leaf_index < 0 or leaf_index >= len(self.leaves):
             return []
 
         proof = []
@@ -180,17 +180,17 @@ class ValueVector(BaseModel):
     u: float = Field(default=0.0, ge=0.0, description="Reusability (cross-domain applicability)")
 
     def total(self) -> float:
-        return sum(self.dict().values())
+        return sum(self.model_dump().values())
 
     def apply_subjective_weights(self, weights: Dict[str, float]) -> "ValueVector":
-        data = self.dict()
+        data = self.model_dump()
         for key in data:
             data[key] *= weights.get(key, 1.0)
         return ValueVector(**data)
 
     def adjust_for_supply(self, supply_factors: Dict[str, float]) -> "ValueVector":
         """Scale down based on abundance (higher factor = more common = less value)"""
-        data = self.dict()
+        data = self.model_dump()
         for key in data:
             factor = max(supply_factors.get(key, 1.0), 1.0)
             data[key] /= factor
@@ -278,8 +278,8 @@ class ValueLedger:
                     try:
                         data = json.loads(line)
                         entries.append(LedgerEntry(**data))
-                    except Exception as e:
-                        print(f"Warning: Failed to load ledger line: {e}")
+                    except (json.JSONDecodeError, TypeError, KeyError) as e:
+                        logger.warning(f"Failed to load ledger line: {e}")
         return entries
 
     def _rebuild_merkle_tree(self):
@@ -295,7 +295,7 @@ class ValueLedger:
 
         self.entries.append(entry)
         with open(self.storage_path, "a") as f:
-            json.dump(entry.dict(), f)
+            json.dump(entry.model_dump(), f)
             f.write("\n")
 
     def accrue_with_heuristics(
@@ -317,7 +317,7 @@ class ValueLedger:
 
         return self.accrue(
             intent_id=ctx.intent_id,
-            initial_vector=auto_vector.dict(),
+            initial_vector=auto_vector.model_dump(),
             memory_hash=ctx.memory_hash,
             metadata={
                 "scoring_engine": "HeuristicEngine v1",
@@ -422,7 +422,7 @@ class ValueLedger:
         """Rewrite entire ledger (rarely used - only for status changes)"""
         with open(self.storage_path, "w") as f:
             for entry in self.entries:
-                json.dump(entry.dict(), f)
+                json.dump(entry.model_dump(), f)
                 f.write("\n")
 
     # === Phase 1 - 17.9: Explicit Revocation ===
@@ -529,7 +529,7 @@ class ValueLedger:
             "timestamp": entry.timestamp,
             "intent_id": entry.intent_id,
             "status": entry.status,
-            "value_vector": entry.value_vector.dict(),
+            "value_vector": entry.value_vector.model_dump(),
             "proof": {
                 "content_hash": entry.proof.content_hash,
                 "timestamp_proof": entry.proof.timestamp_proof,
@@ -783,7 +783,7 @@ class ValueLedger:
         """Sum all value vectors."""
         result = {"t": 0.0, "e": 0.0, "n": 0.0, "f": 0.0, "r": 0.0, "s": 0.0, "u": 0.0}
         for entry in entries:
-            vec = entry.value_vector.dict()
+            vec = entry.value_vector.model_dump()
             for k in result:
                 result[k] += vec.get(k, 0.0)
         return ValueVector(**result)
@@ -792,7 +792,7 @@ class ValueLedger:
         """Take maximum value for each dimension."""
         result = {"t": 0.0, "e": 0.0, "n": 0.0, "f": 0.0, "r": 0.0, "s": 0.0, "u": 0.0}
         for entry in entries:
-            vec = entry.value_vector.dict()
+            vec = entry.value_vector.model_dump()
             for k in result:
                 result[k] = max(result[k], vec.get(k, 0.0))
         return ValueVector(**result)
@@ -808,7 +808,7 @@ class ValueLedger:
 
         for entry in entries:
             weight = weights.get(entry.id, 1.0) / total_weight
-            vec = entry.value_vector.dict()
+            vec = entry.value_vector.model_dump()
             for k in result:
                 result[k] += vec.get(k, 0.0) * weight
         return ValueVector(**result)
@@ -934,7 +934,7 @@ class SourceValidator:
             errors.append({"field": "intent_id", "error": "Missing intent ID"})
 
         # Check value vector validity
-        vec = entry.value_vector.dict()
+        vec = entry.value_vector.model_dump()
         for k, v in vec.items():
             if v < 0:
                 errors.append(

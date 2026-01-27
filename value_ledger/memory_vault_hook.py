@@ -6,9 +6,12 @@ Only accesses content if explicitly allowed by Learning Contracts.
 
 from __future__ import annotations
 
+import logging
 from typing import List, Tuple, Optional, Dict, Any
 from dataclasses import dataclass
 import time
+
+logger = logging.getLogger(__name__)
 
 # Placeholder imports — will be replaced with real ones when Memory Vault exists
 # from memory_vault.core import MemoryVault, MemoryEntry
@@ -164,6 +167,6 @@ class MemoryVaultHook:
                     },
                     freeze_parent=False,
                 )
-                print(
-                    f"[ValueLedger] Novelty corrected for {entry.id[:8]}...: {old_n:.1f} → {new_n:.1f}"
+                logger.info(
+                    f"Novelty corrected for {entry.id[:8]}...: {old_n:.1f} → {new_n:.1f}"
                 )

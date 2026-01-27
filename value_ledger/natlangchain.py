@@ -79,9 +79,9 @@ def _validate_url(url: str, allow_private: bool = False) -> None:
                 ip = ipaddress.ip_address(resolved)
                 if ip.is_private or ip.is_loopback or ip.is_link_local:
                     raise ValueError(f"URL resolves to private address: {resolved}")
-        except socket.gaierror:
-            # Can't resolve - allow (will fail at connection time)
-            pass
+        except socket.gaierror as e:
+            # DNS resolution failed - reject to prevent SSRF bypass
+            raise ValueError(f"Cannot resolve hostname '{hostname}': {e}")
 
     logger.debug(f"URL validated: {url}")
 
@@ -458,7 +458,7 @@ class NatLangChainExporter:
             timestamp=entry.timestamp,
             proof_hash=entry.proof.content_hash or "",
             value_summary={
-                "vector": entry.value_vector.dict(),
+                "vector": entry.value_vector.model_dump(),
                 "total": entry.value_vector.total(),
                 "status": entry.status,
             },
