@@ -105,7 +105,7 @@ class LedgerCLI:
     def _export_json(self, entries, output_path: str, include_proofs: bool) -> None:
         data = []
         for entry in entries:
-            entry_data = entry.dict()
+            entry_data = entry.model_dump()
             if include_proofs:
                 entry_data["merkle_proof"] = self.ledger.get_merkle_proof(entry.id)
             data.append(entry_data)
@@ -466,10 +466,18 @@ def main():
                 status = args[i + 1]
                 i += 2
             elif args[i] == "--since" and i + 1 < len(args):
-                since = float(args[i + 1])
+                try:
+                    since = float(args[i + 1])
+                except ValueError:
+                    print(f"Error: Invalid value for --since: {args[i + 1]} (expected a number)")
+                    return
                 i += 2
             elif args[i] == "--limit" and i + 1 < len(args):
-                limit = int(args[i + 1])
+                try:
+                    limit = int(args[i + 1])
+                except ValueError:
+                    print(f"Error: Invalid value for --limit: {args[i + 1]} (expected an integer)")
+                    return
                 i += 2
             else:
                 i += 1

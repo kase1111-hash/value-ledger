@@ -6,11 +6,19 @@ Listens for intent lifecycle events and automatically accrues value using heuris
 
 from __future__ import annotations
 
+import time
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
+import logging
+
 from .core import ValueLedger
 from .heuristics import ScoringContext, HeuristicEngine
+
+logger = logging.getLogger(__name__)
+
+# Maximum age (in seconds) for an active intent before it's considered stale
+_MAX_INTENT_AGE = 24 * 60 * 60  # 24 hours
 
 
 @dataclass
@@ -38,10 +46,27 @@ class IntentLogConnector:
     Call .handle_event() whenever IntentLog emits an event.
     """
 
-    def __init__(self, ledger: ValueLedger):
+    def __init__(self, ledger: ValueLedger, max_intent_age: float = _MAX_INTENT_AGE):
         self.ledger = ledger
         self.engine = HeuristicEngine()
         self.active_intents: Dict[str, float] = {}  # intent_id -> start_time
+        self._max_intent_age = max_intent_age
+
+    def cleanup_stale_intents(self) -> int:
+        """
+        Remove intents that have been active for longer than max_intent_age.
+        Returns the number of stale intents removed.
+        """
+        current_time = time.time()
+        stale_intents = [
+            intent_id
+            for intent_id, start_time in self.active_intents.items()
+            if current_time - start_time > self._max_intent_age
+        ]
+        for intent_id in stale_intents:
+            logger.warning(f"Removing stale intent (no completion event): {intent_id}")
+            del self.active_intents[intent_id]
+        return len(stale_intents)
 
     def handle_event(self, event: IntentEvent | Dict[str, Any]):
         """
@@ -49,6 +74,10 @@ class IntentLogConnector:
         """
         if isinstance(event, dict):
             event = IntentEvent(**event)
+
+        # Periodically cleanup stale intents to prevent memory leak
+        if len(self.active_intents) > 100:
+            self.cleanup_stale_intents()
 
         if event.event_type == "intent_started":
             self._on_intent_started(event)
@@ -62,7 +91,7 @@ class IntentLogConnector:
     def _on_intent_started(self, event: IntentEvent):
         """Record start time for duration tracking"""
         self.active_intents[event.intent_id] = event.timestamp
-        print(f"[ValueLedger] Intent started: {event.intent_id}")
+        logger.info(f"Intent started: {event.intent_id}")
 
     def _on_intent_completed(self, event: IntentEvent):
         """Process completed/abandoned intent and accrue value"""
@@ -122,9 +151,9 @@ class IntentLogConnector:
 
         # Log results
         current_value = self.ledger.current_value_for_intent(event.intent_id)
-        print(f"[ValueLedger] Accrued value for {event.intent_id}")
-        print(f"           Entry: {entry_id[:8]}... | Total: {current_value.total():.1f}")
-        print(f"           Vector: {current_value.dict()}")
+        logger.info(f"Accrued value for {event.intent_id}")
+        logger.debug(f"Entry: {entry_id[:8]}... | Total: {current_value.total():.1f}")
+        logger.debug(f"Vector: {current_value.model_dump()}")
 
 
 # ———————————————————————————————

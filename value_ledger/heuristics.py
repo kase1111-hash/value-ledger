@@ -6,11 +6,14 @@ Now understands semantic similarity, not just word overlap.
 
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass
 from typing import List, Tuple, Optional, Dict
 
 from .core import ValueVector
+
+logger = logging.getLogger(__name__)
 
 # Embedding support — lazy import to allow graceful degradation
 try:
@@ -145,8 +148,8 @@ class NoveltyScorer(HeuristicScorer):
             novelty = 10.0 * (1.0 - math.pow(avg_top_similarity, 1.2))
             return ValueVector(n=max(1.0, novelty))
 
-        except Exception as e:
-            print(f"[NoveltyScorer] Embedding failed ({e}), falling back to Jaccard")
+        except (RuntimeError, ImportError, ValueError) as e:
+            logger.warning(f"Embedding failed ({e}), falling back to Jaccard")
             return self._fallback_jaccard(ctx)
 
     def _fallback_jaccard(self, ctx: ScoringContext) -> ValueVector:
@@ -361,7 +364,7 @@ class HeuristicEngine:
 
         if total.total() > 70.0:
             scale = 70.0 / total.total()
-            total = ValueVector(**{k: v * scale for k, v in total.dict().items()})
+            total = ValueVector(**{k: v * scale for k, v in total.model_dump().items()})
 
         if ctx.user_override:
             for k, delta in ctx.user_override.items():

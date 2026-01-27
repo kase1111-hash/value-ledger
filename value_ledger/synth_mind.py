@@ -338,7 +338,7 @@ class SynthMindHook:
 
         if self.auto_score:
             score = self.scorer.score(ctx)
-            session_data["score"] = score.dict()
+            session_data["score"] = score.model_dump()
             self.completed_sessions.append(session_data)
             return score
 
