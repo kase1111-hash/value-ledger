@@ -101,7 +101,20 @@ class NoveltyScorer(HeuristicScorer):
     EMBEDDING-BASED NOVELTY
     Uses semantic embeddings to compare current thought against personal history.
     Much more accurate than word overlap.
+
+    Telemetry:
+        The scorer tracks fallback usage for monitoring deployment health:
+        - embedding_calls: Number of times embedding scoring was attempted
+        - fallback_calls: Number of times Jaccard fallback was used
+        - fallback_reason: Last reason for using fallback
+
+        Access via class attributes: NoveltyScorer.embedding_calls, etc.
     """
+
+    # Telemetry counters (class-level for aggregation across instances)
+    embedding_calls: int = 0
+    fallback_calls: int = 0
+    fallback_reason: str = ""
 
     def __call__(self, ctx: ScoringContext) -> ValueVector:
         content = ctx.memory_content
@@ -113,9 +126,16 @@ class NoveltyScorer(HeuristicScorer):
 
         # Case 2: Embeddings unavailable → fall back to Jaccard
         if not _HAS_EMBEDDINGS:
+            NoveltyScorer.fallback_calls += 1
+            NoveltyScorer.fallback_reason = "sentence-transformers not installed"
+            logger.info(
+                "NoveltyScorer using Jaccard fallback: sentence-transformers not available. "
+                "Install with 'pip install sentence-transformers' for embedding-based scoring."
+            )
             return self._fallback_jaccard(ctx)
 
         try:
+            NoveltyScorer.embedding_calls += 1
             model = get_embedding_model()
             current_embedding = model.encode(content, normalize_embeddings=True)
 
@@ -146,11 +166,41 @@ class NoveltyScorer(HeuristicScorer):
 
             # Non-linear novelty curve: resistant to moderate similarity
             novelty = 10.0 * (1.0 - math.pow(avg_top_similarity, 1.2))
+            logger.debug(
+                f"NoveltyScorer: embedding-based score={novelty:.2f}, "
+                f"avg_similarity={avg_top_similarity:.3f}, memories_compared={len(valid_prev_contents)}"
+            )
             return ValueVector(n=max(1.0, novelty))
 
         except (RuntimeError, ImportError, ValueError) as e:
-            logger.warning(f"Embedding failed ({e}), falling back to Jaccard")
+            NoveltyScorer.fallback_calls += 1
+            NoveltyScorer.fallback_reason = str(e)
+            logger.warning(f"NoveltyScorer: embedding failed ({e}), using Jaccard fallback")
             return self._fallback_jaccard(ctx)
+
+    @classmethod
+    def get_telemetry(cls) -> Dict[str, any]:
+        """
+        Get telemetry statistics for monitoring.
+
+        Returns:
+            Dict with embedding_calls, fallback_calls, fallback_rate, and fallback_reason
+        """
+        total = cls.embedding_calls + cls.fallback_calls
+        return {
+            "embedding_calls": cls.embedding_calls,
+            "fallback_calls": cls.fallback_calls,
+            "fallback_rate": cls.fallback_calls / total if total > 0 else 0.0,
+            "fallback_reason": cls.fallback_reason,
+            "embeddings_available": _HAS_EMBEDDINGS,
+        }
+
+    @classmethod
+    def reset_telemetry(cls) -> None:
+        """Reset telemetry counters."""
+        cls.embedding_calls = 0
+        cls.fallback_calls = 0
+        cls.fallback_reason = ""
 
     def _fallback_jaccard(self, ctx: ScoringContext) -> ValueVector:
         content = ctx.memory_content

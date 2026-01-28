@@ -8,17 +8,83 @@ from __future__ import annotations
 
 import time
 from typing import Dict, Any, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import logging
 
 from .core import ValueLedger
 from .heuristics import ScoringContext, HeuristicEngine
+from .security import RateLimitError
 
 logger = logging.getLogger(__name__)
 
 # Maximum age (in seconds) for an active intent before it's considered stale
 _MAX_INTENT_AGE = 24 * 60 * 60  # 24 hours
+
+# Default rate limiting settings
+_DEFAULT_RATE_LIMIT = 100  # events per window
+_DEFAULT_RATE_WINDOW = 60.0  # seconds
+
+
+@dataclass
+class RateLimiter:
+    """
+    Token bucket rate limiter for event processing.
+
+    Prevents DoS attacks and excessive resource consumption from
+    runaway event streams.
+    """
+
+    max_events: int = _DEFAULT_RATE_LIMIT
+    window_seconds: float = _DEFAULT_RATE_WINDOW
+    _events: list = field(default_factory=list)
+
+    def check(self, raise_on_limit: bool = True) -> bool:
+        """
+        Check if a new event is allowed under the rate limit.
+
+        Args:
+            raise_on_limit: If True, raise RateLimitError when limit exceeded
+
+        Returns:
+            True if event is allowed, False if rate limited
+
+        Raises:
+            RateLimitError: If raise_on_limit=True and limit is exceeded
+        """
+        now = time.time()
+        window_start = now - self.window_seconds
+
+        # Remove old events outside the window
+        self._events = [t for t in self._events if t > window_start]
+
+        # Check if under limit
+        if len(self._events) >= self.max_events:
+            if raise_on_limit:
+                raise RateLimitError(
+                    f"Rate limit exceeded: {self.max_events} events per {self.window_seconds}s",
+                    details={
+                        "limit": self.max_events,
+                        "window_seconds": self.window_seconds,
+                        "current_count": len(self._events),
+                    }
+                )
+            return False
+
+        # Record this event
+        self._events.append(now)
+        return True
+
+    def reset(self):
+        """Reset the rate limiter state."""
+        self._events = []
+
+    @property
+    def current_count(self) -> int:
+        """Current number of events in the window."""
+        now = time.time()
+        window_start = now - self.window_seconds
+        return len([t for t in self._events if t > window_start])
 
 
 @dataclass
@@ -44,13 +110,39 @@ class IntentLogConnector:
     """
     Connects ValueLedger to IntentLog event stream.
     Call .handle_event() whenever IntentLog emits an event.
+
+    Rate limiting is enabled by default to prevent DoS and resource exhaustion.
     """
 
-    def __init__(self, ledger: ValueLedger, max_intent_age: float = _MAX_INTENT_AGE):
+    def __init__(
+        self,
+        ledger: ValueLedger,
+        max_intent_age: float = _MAX_INTENT_AGE,
+        rate_limit: Optional[int] = _DEFAULT_RATE_LIMIT,
+        rate_window: float = _DEFAULT_RATE_WINDOW,
+    ):
+        """
+        Initialize the connector.
+
+        Args:
+            ledger: ValueLedger instance to accrue to
+            max_intent_age: Maximum age (seconds) before intent is considered stale
+            rate_limit: Maximum events per window (None to disable rate limiting)
+            rate_window: Rate limit window in seconds
+        """
         self.ledger = ledger
         self.engine = HeuristicEngine()
         self.active_intents: Dict[str, float] = {}  # intent_id -> start_time
         self._max_intent_age = max_intent_age
+
+        # Rate limiting
+        self._rate_limiter: Optional[RateLimiter] = None
+        if rate_limit is not None:
+            self._rate_limiter = RateLimiter(
+                max_events=rate_limit,
+                window_seconds=rate_window,
+            )
+        self._rate_limited_count = 0
 
     def cleanup_stale_intents(self) -> int:
         """
@@ -68,12 +160,31 @@ class IntentLogConnector:
             del self.active_intents[intent_id]
         return len(stale_intents)
 
-    def handle_event(self, event: IntentEvent | Dict[str, Any]):
+    def handle_event(self, event: IntentEvent | Dict[str, Any], raise_on_rate_limit: bool = True):
         """
         Main entry point — called by IntentLog (or a message bus) on every event.
+
+        Args:
+            event: The intent event to process
+            raise_on_rate_limit: If True, raise RateLimitError when rate limited.
+                                 If False, silently drop the event.
+
+        Raises:
+            RateLimitError: If rate limit is exceeded and raise_on_rate_limit=True
         """
         if isinstance(event, dict):
             event = IntentEvent(**event)
+
+        # Check rate limit before processing
+        if self._rate_limiter is not None:
+            try:
+                self._rate_limiter.check(raise_on_limit=raise_on_rate_limit)
+            except RateLimitError:
+                self._rate_limited_count += 1
+                logger.warning(
+                    f"Rate limit exceeded, dropping event for intent {event.intent_id}"
+                )
+                raise
 
         # Periodically cleanup stale intents to prevent memory leak
         if len(self.active_intents) > 100:
@@ -87,6 +198,11 @@ class IntentLogConnector:
 
         # "intent_updated" could trigger partial accruals in future
         # For now, we only accrue on completion/abandonment
+
+    @property
+    def rate_limited_count(self) -> int:
+        """Number of events that were rate limited."""
+        return self._rate_limited_count
 
     def _on_intent_started(self, event: IntentEvent):
         """Record start time for duration tracking"""

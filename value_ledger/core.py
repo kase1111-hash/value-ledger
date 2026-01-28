@@ -93,7 +93,29 @@ def compute_timestamp_proof(timestamp: float, entry_id: str) -> str:
 
 
 class MerkleTree:
-    """Simple Merkle tree for ledger proof generation."""
+    """
+    Simple Merkle tree for ledger proof generation.
+
+    This implementation follows standard Merkle tree construction where:
+    - Leaves are hashed using SHA-256
+    - Internal nodes are computed by concatenating and hashing child pairs
+    - The root provides a cryptographic commitment to all leaves
+
+    Edge Case: Odd-Length Levels
+    ----------------------------
+    When a level has an odd number of nodes, the last node is paired with itself
+    (duplicated) to create a complete binary tree. This is standard practice but
+    has implications for proof verification:
+
+    - For a tree with 3 leaves [A, B, C], the first level becomes [(A,B), (C,C)]
+    - If C is at index 2 (even), the proof includes C as the "right" sibling
+    - This self-pairing still produces a valid proof because:
+        hash(C + C) = hash(left + right) where left == right
+
+    This behavior is intentional and maintains proof validity. Third-party
+    verifiers should be aware that a proof step where left == right indicates
+    the original leaf was at an odd-indexed position at a level's end.
+    """
 
     def __init__(self):
         self.leaves: List[str] = []
@@ -128,7 +150,21 @@ class MerkleTree:
         return self._root
 
     def get_proof(self, leaf_index: int) -> List[Dict[str, str]]:
-        """Get Merkle proof for a leaf at given index."""
+        """
+        Get Merkle proof for a leaf at given index.
+
+        Args:
+            leaf_index: Zero-based index of the leaf to get proof for
+
+        Returns:
+            List of proof steps, each with 'position' ('left' or 'right') and 'hash'.
+            Empty list if index is out of bounds.
+
+        Note:
+            When the target leaf is at the end of an odd-length level, the proof
+            will include a step where the sibling hash equals the leaf's own hash
+            (self-pairing). This is correct behavior - see class docstring.
+        """
         if leaf_index < 0 or leaf_index >= len(self.leaves):
             return []
 
