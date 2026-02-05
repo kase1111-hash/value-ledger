@@ -113,6 +113,11 @@ pip install -e ".[dev]"
 pip install -e ".[embeddings]"
 ```
 
+> **Note:** The embeddings option installs `sentence-transformers` and `torch`. On first use,
+> the novelty scorer will download the `all-MiniLM-L6-v2` model (~90MB). For air-gapped
+> environments, pre-download the model or use the Jaccard fallback (automatic when
+> embeddings are unavailable).
+
 ### Windows
 
 ```batch
