@@ -339,7 +339,7 @@ class NLCClient:
                     chain_compatible=result.get("chain_compatible", True),
                 )
 
-        except Exception as e:
+        except Exception:
             # Fallback to local validation if API unavailable
             return self._local_validate(record)
 
@@ -651,7 +651,7 @@ Timestamp: {time.time():.0f}
         score = 0.0
 
         # Check that key values are mentioned
-        vec = original.value_summary.get("vector", {})
+        _vec = original.value_summary.get("vector", {})  # Reserved for future dimension checks
         total = original.value_summary.get("total", 0)
 
         # Check for value mentions (basic heuristic)

@@ -12,6 +12,8 @@ from .core import (
     LedgerEntry,
     ProofData,
     MerkleTree,
+)
+from .failure_modes import (
     ClockMonitor,
     SourceValidator,
     FailureModeHandler,

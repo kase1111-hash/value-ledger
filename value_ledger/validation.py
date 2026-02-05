@@ -409,7 +409,7 @@ class EnhancedValidator:
             if gaps:
                 avg_gap = sum(gaps) / len(gaps)
                 max_gap = max(gaps)
-                min_gap = min(gaps)
+                _min_gap = min(gaps)  # Reserved for future minimum gap validation
 
                 # Check gap distribution
                 if avg_gap > 0:

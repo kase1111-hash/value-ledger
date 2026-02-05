@@ -60,7 +60,7 @@ This module is part of the Agent-OS ecosystem — a natural-language-native oper
 
 ## Architecture
 
-The Value Ledger comprises 14 Python modules (~12,000 lines of code):
+The Value Ledger comprises 14 Python modules (~9,350 lines of code):
 
 | Module | Purpose |
 |--------|---------|
@@ -113,6 +113,11 @@ pip install -e ".[dev]"
 pip install -e ".[embeddings]"
 ```
 
+> **Note:** The embeddings option installs `sentence-transformers` and `torch`. On first use,
+> the novelty scorer will download the `all-MiniLM-L6-v2` model (~90MB). For air-gapped
+> environments, pre-download the model or use the Jaccard fallback (automatic when
+> embeddings are unavailable).
+
 ### Windows
 
 ```batch
@@ -148,7 +153,7 @@ value-ledger stats
 value-ledger query --intent "research-task"
 
 # Export to JSON
-value-ledger export json --output ledger.json
+value-ledger export ledger.json --format json
 
 # Generate Merkle proof
 value-ledger proof <entry-id>
@@ -166,17 +171,17 @@ from value_ledger import ValueLedger, ValueVector
 ledger = ValueLedger("ledger.jsonl")
 
 # Add entry with value vector
-entry = ledger.append(
+entry_id = ledger.accrue(
     intent_id="research-task-001",
-    value_vector=ValueVector(t=1.0, e=0.8, n=0.5, f=0.0, r=0.3, s=0.2, u=0.4),
-    content_hash="sha256:...",
+    initial_vector={"t": 1.0, "e": 0.8, "n": 0.5, "f": 0.0, "r": 0.3, "s": 0.2, "u": 0.4},
+    content_for_proof="sha256:...",
 )
 
-# Query entries
-results = ledger.query(intent_id="research-task-001")
+# Get entry by ID
+entry = ledger.get_entry(entry_id)
 
 # Generate Merkle proof
-proof = ledger.generate_merkle_proof(entry.id)
+proof = ledger.get_merkle_proof(entry_id)
 ```
 
 ### Security Integration
