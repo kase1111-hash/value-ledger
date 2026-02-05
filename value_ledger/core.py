@@ -18,6 +18,10 @@ from pydantic import BaseModel, Field, model_validator
 if TYPE_CHECKING:
     from .heuristics import ScoringContext
 
+# Phase 2 - 17.5: Failure Mode Handling classes moved to failure_modes.py
+# Re-exported here for backwards compatibility
+from .failure_modes import ClockMonitor, SourceValidator, FailureModeHandler  # noqa: E402
+
 logger = logging.getLogger(__name__)
 
 
@@ -851,10 +855,7 @@ class ValueLedger:
 
 
 # === Phase 2 - 17.5: Failure Mode Handling ===
-# These classes have been moved to failure_modes.py for better modularity.
-# They are re-exported here for backwards compatibility.
-
-from .failure_modes import ClockMonitor, SourceValidator, FailureModeHandler
+# Classes exported at module level for backwards compatibility (imported at top of file)
 
 __all__ = [
     "ClockMonitor",
