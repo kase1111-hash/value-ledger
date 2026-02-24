@@ -20,6 +20,7 @@ import hashlib
 import json
 import logging
 import socket
+import threading
 import time
 import urllib.request
 import urllib.error
@@ -310,7 +311,7 @@ class BoundarySIEMClient:
             req.add_header("User-Agent", "ValueLedger/1.0")
             with urllib.request.urlopen(req, timeout=2) as response:
                 self._connected = response.status == 200
-        except Exception as e:
+        except (urllib.error.URLError, socket.error, OSError) as e:
             logger.debug(f"SIEM HTTP health check failed: {e}")
             self._connected = False
 
@@ -407,7 +408,7 @@ class BoundarySIEMClient:
         except urllib.error.URLError as e:
             logger.warning(f"SIEM HTTP send failed: {e}")
             return False
-        except Exception as e:
+        except (urllib.error.URLError, json.JSONDecodeError, OSError) as e:
             logger.error(f"SIEM HTTP unexpected error: {e}")
             return False
 
@@ -431,7 +432,7 @@ class BoundarySIEMClient:
         except socket.error as e:
             logger.warning(f"SIEM CEF send failed: {e}")
             return False
-        except Exception as e:
+        except (socket.error, OSError) as e:
             logger.error(f"SIEM CEF unexpected error: {e}")
             return False
 
@@ -538,8 +539,8 @@ class BoundaryDaemonClient:
                     self._current_mode = BoundaryMode(data.get("mode", "restricted"))
                     self._connected = True
                     return True
-        except Exception:
-            pass
+        except (urllib.error.URLError, socket.error, json.JSONDecodeError, OSError) as e:
+            logger.debug(f"Boundary Daemon HTTP fallback unavailable: {e}")
 
         self._connected = False
         return False
@@ -607,13 +608,13 @@ class BoundaryDaemonClient:
         if Path(self.config.socket_path).exists():
             try:
                 return self._query_socket(request_data)
-            except Exception as e:
+            except (socket.error, json.JSONDecodeError, OSError) as e:
                 logger.debug(f"Socket query failed: {e}")
 
         # Try HTTP
         try:
             return self._query_http(request_data)
-        except Exception as e:
+        except (urllib.error.URLError, json.JSONDecodeError, OSError) as e:
             logger.warning(f"HTTP policy query failed: {e}")
 
         # Default deny
@@ -737,7 +738,7 @@ class BoundaryDaemonClient:
 
             with urllib.request.urlopen(req, timeout=self.config.timeout) as response:
                 return response.status in (200, 201, 202)
-        except Exception as e:
+        except (urllib.error.URLError, socket.error, OSError) as e:
             logger.error(f"Failed to report violation: {e}")
             return False
 
@@ -755,6 +756,7 @@ class SecurityManager:
     """
 
     _instance: Optional["SecurityManager"] = None
+    _instance_lock = threading.Lock()
 
     def __init__(
         self,
@@ -768,9 +770,12 @@ class SecurityManager:
 
     @classmethod
     def get_instance(cls) -> "SecurityManager":
-        """Get or create singleton instance."""
-        if cls._instance is None:
-            cls._instance = cls()
+        """Get or create singleton instance (thread-safe)."""
+        if cls._instance is not None:
+            return cls._instance
+        with cls._instance_lock:
+            if cls._instance is None:
+                cls._instance = cls()
         return cls._instance
 
     @classmethod

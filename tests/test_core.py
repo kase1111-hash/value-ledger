@@ -827,14 +827,14 @@ class TestSourceValidator:
         assert result["valid"]
 
     def test_validate_missing_intent_id(self):
-        """Missing intent_id fails validation."""
-        validator = SourceValidator()
-        entry = LedgerEntry(
-            intent_id="",
-            value_vector=ValueVector(t=5.0),
-        )
-        result = validator.validate_entry(entry)
-        assert not result["valid"]
+        """Empty intent_id is rejected at model validation."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError, match="string_too_short"):
+            LedgerEntry(
+                intent_id="",
+                value_vector=ValueVector(t=5.0),
+            )
 
     def test_validate_aggregation(self):
         """Aggregation validation checks all entries."""

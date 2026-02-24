@@ -81,7 +81,7 @@ def _validate_url(url: str, allow_private: bool = False) -> None:
                     raise ValueError(f"URL resolves to private address: {resolved}")
         except socket.gaierror as e:
             # DNS resolution failed - reject to prevent SSRF bypass
-            raise ValueError(f"Cannot resolve hostname '{hostname}': {e}")
+            raise ValueError(f"Cannot resolve hostname '{hostname}': {e}") from e
 
     logger.debug(f"URL validated: {url}")
 
@@ -308,7 +308,7 @@ class NLCClient:
                 success=False,
                 error=f"Response error: {e}",
             )
-        except Exception as e:
+        except (TypeError, KeyError, OSError) as e:
             return AnchorResult(
                 success=False,
                 error=str(e),
@@ -339,7 +339,7 @@ class NLCClient:
                     chain_compatible=result.get("chain_compatible", True),
                 )
 
-        except Exception:
+        except (urllib.error.URLError, socket.error, OSError):
             # Fallback to local validation if API unavailable
             return self._local_validate(record)
 
@@ -356,7 +356,7 @@ class NLCClient:
             with urllib.request.urlopen(req, timeout=self.timeout) as response:
                 return self._read_response(response).decode("utf-8")
 
-        except Exception as e:
+        except (urllib.error.URLError, socket.error, OSError) as e:
             return f"Error fetching narrative: {e}"
 
     def search_by_intent(self, intent: str) -> List[NLCRecord]:
@@ -374,7 +374,7 @@ class NLCClient:
                 result = json.loads(self._read_response(response).decode("utf-8"))
                 return [NLCRecord.from_dict(r) for r in result.get("entries", [])]
 
-        except Exception:
+        except (urllib.error.URLError, socket.error, json.JSONDecodeError, OSError):
             return []
 
     def check_inclusion(self, anchor_id: str) -> Optional[InclusionProof]:
@@ -398,7 +398,7 @@ class NLCClient:
                     verified=result.get("verified", False),
                 )
 
-        except Exception:
+        except (urllib.error.URLError, socket.error, json.JSONDecodeError, OSError):
             return None
 
     def _local_validate(self, record: NLCRecord) -> ValidationResult:
