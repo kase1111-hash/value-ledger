@@ -30,10 +30,6 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 
-# =============================================================================
-# Validation Criteria Configuration
-# =============================================================================
-
 
 class CriteriaType(str, Enum):
     """Types of validation criteria."""
@@ -154,10 +150,6 @@ class CriteriaConfig:
         )
 
 
-# =============================================================================
-# Validation Scores
-# =============================================================================
-
 
 @dataclass
 class CoherenceScore:
@@ -215,10 +207,6 @@ class CompletenessScore:
     gaps: List[Tuple[float, float]] = field(default_factory=list)
     issues: List[str] = field(default_factory=list)
 
-
-# =============================================================================
-# Validation Report
-# =============================================================================
 
 
 @dataclass
@@ -321,10 +309,6 @@ class ValidationReport:
         if severity in [SeverityLevel.ERROR, SeverityLevel.CRITICAL]:
             self.uncertainty_markers.append(f"{criterion}:{message}")
 
-
-# =============================================================================
-# Enhanced Validator
-# =============================================================================
 
 
 class EnhancedValidator:
@@ -852,10 +836,6 @@ class EnhancedValidator:
         return entropy
 
 
-# =============================================================================
-# Specialized Checkers
-# =============================================================================
-
 
 class ConsistencyChecker:
     """
@@ -989,10 +969,6 @@ class ConfidenceCalculator:
 
         return base_confidence * issue_factor
 
-
-# =============================================================================
-# Convenience Functions
-# =============================================================================
 
 
 def create_enhanced_validator(

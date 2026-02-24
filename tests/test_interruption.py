@@ -21,7 +21,6 @@ from value_ledger.heuristics import ScoringContext
 
 
 class TestInterruptionType:
-    """Tests for InterruptionType enum."""
 
     def test_all_types_exist(self):
         """Verify all expected interruption types exist."""
@@ -33,10 +32,8 @@ class TestInterruptionType:
 
 
 class TestInterruptionEvent:
-    """Tests for InterruptionEvent dataclass."""
 
     def test_basic_event(self):
-        """Test creating a basic event."""
         event = InterruptionEvent(
             intent_id="test-123",
             timestamp=1000.0,
@@ -50,7 +47,6 @@ class TestInterruptionEvent:
         assert event.metadata == {}
 
     def test_full_event(self):
-        """Test creating an event with all fields."""
         event = InterruptionEvent(
             intent_id="test-456",
             timestamp=2000.0,
@@ -65,17 +61,14 @@ class TestInterruptionEvent:
 
 
 class TestInterruptionTracker:
-    """Tests for InterruptionTracker class."""
 
     def test_start_session(self):
-        """Test starting a tracking session."""
         tracker = InterruptionTracker()
         tracker.start_session("intent-1")
         assert tracker.is_session_active("intent-1")
         assert "intent-1" in tracker.get_active_session_ids()
 
     def test_record_interruption(self):
-        """Test recording interruptions."""
         tracker = InterruptionTracker()
         tracker.start_session("intent-1")
 
@@ -104,7 +97,6 @@ class TestInterruptionTracker:
         assert tracker.get_interruption_count("auto-start") == 1
 
     def test_weighted_interruptions(self):
-        """Test weighted interruption calculation."""
         tracker = InterruptionTracker()
         tracker.start_session("intent-1")
 
@@ -199,7 +191,6 @@ class TestInterruptionTracker:
         assert summaries[0].intent_id == "intent-1"
 
     def test_summary_to_dict(self):
-        """Test summary serialization."""
         tracker = InterruptionTracker()
         tracker.start_session("intent-1")
         summary = tracker.end_session("intent-1")
@@ -214,10 +205,8 @@ class TestInterruptionTracker:
 
 
 class TestBoundaryDaemonListener:
-    """Tests for BoundaryDaemonListener class."""
 
     def test_handle_notification_event(self):
-        """Test handling notification events."""
         tracker = InterruptionTracker()
         tracker.start_session("intent-1")
         listener = BoundaryDaemonListener(tracker)
@@ -237,7 +226,6 @@ class TestBoundaryDaemonListener:
         assert tracker.get_interruption_count("intent-1") == 1
 
     def test_handle_context_switch(self):
-        """Test handling context switch events."""
         tracker = InterruptionTracker()
         tracker.start_session("intent-1")
         listener = BoundaryDaemonListener(tracker)
@@ -253,7 +241,6 @@ class TestBoundaryDaemonListener:
         assert tracker.get_interruption_count("intent-1") == 1
 
     def test_handle_focus_events(self):
-        """Test handling focus lost/regained events."""
         tracker = InterruptionTracker()
         tracker.start_session("intent-1")
         listener = BoundaryDaemonListener(tracker)
@@ -330,7 +317,6 @@ class TestBoundaryDaemonListener:
         assert result is None
 
     def test_connect_disconnect(self):
-        """Test connect/disconnect to daemon."""
         tracker = InterruptionTracker()
         listener = BoundaryDaemonListener(tracker)
 
@@ -345,10 +331,8 @@ class TestBoundaryDaemonListener:
 
 
 class TestMockBoundaryEmitter:
-    """Tests for MockBoundaryEmitter class."""
 
     def test_emit_notification(self):
-        """Test emitting notification events."""
         tracker = InterruptionTracker()
         tracker.start_session("intent-1")
         listener = BoundaryDaemonListener(tracker)
@@ -360,7 +344,6 @@ class TestMockBoundaryEmitter:
         assert tracker.get_interruption_count("intent-1") == 1
 
     def test_emit_context_switch(self):
-        """Test emitting context switch events."""
         tracker = InterruptionTracker()
         tracker.start_session("intent-1")
         listener = BoundaryDaemonListener(tracker)
@@ -372,7 +355,6 @@ class TestMockBoundaryEmitter:
         assert tracker.get_interruption_count("intent-1") == 1
 
     def test_emit_focus_sequence(self):
-        """Test emitting focus lost/regained sequence."""
         tracker = InterruptionTracker()
         tracker.start_session("intent-1")
         listener = BoundaryDaemonListener(tracker)
@@ -387,21 +369,17 @@ class TestMockBoundaryEmitter:
 
 
 class TestCalculateEffortFactor:
-    """Tests for calculate_effort_factor function."""
 
     def test_zero_interruptions(self):
-        """Test effort factor with no interruptions."""
         factor = calculate_effort_factor(0.0)
         assert factor == pytest.approx(1.0)
 
     def test_weighted_interruptions(self):
-        """Test effort factor calculation."""
         # 5 weighted interruptions: 1.0 + (5 * 0.35) = 2.75
         factor = calculate_effort_factor(5.0)
         assert factor == pytest.approx(2.75)
 
     def test_high_interruption_bonus(self):
-        """Test bonus for high raw count."""
         # 15 raw, 10 weighted:
         # Base: 1.0 + (10 * 0.35) = 4.5
         # Bonus: (15 - 10) * 0.1 = 0.5
@@ -416,7 +394,6 @@ class TestCalculateEffortFactor:
 
 
 class TestIntegration:
-    """Integration tests for the full interruption tracking flow."""
 
     def test_full_tracking_flow(self):
         """Test complete tracking flow from start to scoring."""
@@ -454,7 +431,6 @@ class TestIntegration:
         assert factor > 1.0
 
     def test_integrate_with_scoring_context(self):
-        """Test integrating summary with ScoringContext."""
         tracker = InterruptionTracker()
         tracker.start_session("intent-1")
 
@@ -492,10 +468,8 @@ class TestIntegration:
 
 
 class TestMultipleSessions:
-    """Tests for handling multiple concurrent sessions."""
 
     def test_multiple_sessions(self):
-        """Test tracking multiple sessions concurrently."""
         tracker = InterruptionTracker()
 
         # Start two sessions

@@ -89,7 +89,7 @@ def compute_content_hash(content: Optional[str]) -> Optional[str]:
 def compute_timestamp_proof(timestamp: float, entry_id: str) -> str:
     """
     Generate a timestamp proof.
-    In production, this could anchor to an external timestamping service.
+    TODO: Anchor to external timestamping service (RFC 3161) for production.
     For now, creates a local signed proof.
     """
     proof_data = f"{timestamp}:{entry_id}"
@@ -246,13 +246,13 @@ class ProofData(BaseModel):
 
 
 class LedgerEntry(BaseModel):
-    id: Optional[str] = None
+    id: Optional[str] = Field(default=None, max_length=128)
     timestamp: float = Field(default_factory=time.time)
-    intent_id: str
-    memory_hash: Optional[str] = None  # Reference to encrypted memory in Memory Vault
+    intent_id: str = Field(..., min_length=1, max_length=256)
+    memory_hash: Optional[str] = Field(default=None, max_length=128)
     value_vector: ValueVector
-    status: str = "active"  # active | frozen | revoked
-    parent_id: Optional[str] = None  # For corrections/aggregations (single parent - legacy)
+    status: str = Field(default="active", pattern=r"^(active|frozen|revoked)$")
+    parent_id: Optional[str] = Field(default=None, max_length=128)
     correction_notes: Optional[Dict[str, Any]] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
@@ -261,17 +261,17 @@ class LedgerEntry(BaseModel):
 
     # Revocation fields (Phase 1 - 17.9)
     revoked_at: Optional[float] = None
-    revoked_by: Optional[str] = None
-    revocation_reason: Optional[str] = None
+    revoked_by: Optional[str] = Field(default=None, max_length=256)
+    revocation_reason: Optional[str] = Field(default=None, max_length=1024)
 
     # Owner & Classification fields (Phase 2 - 17.3)
-    owner: Optional[str] = None  # Human/entity ID who owns this entry
+    owner: Optional[str] = Field(default=None, max_length=256)
     classification: int = Field(default=0, ge=0, le=5)  # 0=public, 5=most restricted
-    contract_id: Optional[str] = None  # Link to Learning Contract
+    contract_id: Optional[str] = Field(default=None, max_length=256)
 
     # Multi-parent aggregation fields (Phase 2 - 17.4)
     parent_ids: List[str] = Field(default_factory=list)  # Multiple parent entries
-    aggregation_rule: Optional[str] = None  # sum | max | weighted
+    aggregation_rule: Optional[str] = Field(default=None, pattern=r"^(sum|max|weighted)$")
 
     @model_validator(mode="after")
     def ensure_id(self):
@@ -300,10 +300,15 @@ class ValueLedger:
     - Storage paths are validated to prevent path traversal attacks
     """
 
-    def __init__(self, storage_path: str | Path = "ledger.jsonl"):
+    def __init__(
+        self,
+        storage_path: str | Path = "ledger.jsonl",
+        max_entries: Optional[int] = None,
+    ):
         # Validate storage path to prevent path traversal
         self.storage_path = _validate_ledger_path(storage_path)
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+        self._max_entries = max_entries
         self.entries: List[LedgerEntry] = self._load_all()
         self.merkle_tree = MerkleTree()
         self._rebuild_merkle_tree()
@@ -312,15 +317,33 @@ class ValueLedger:
         if not self.storage_path.exists():
             return []
         entries = []
+        error_count = 0
+        line_num = 0
         with open(self.storage_path, "r") as f:
-            for line in f:
+            for line_num, line in enumerate(f, 1):
                 if line.strip():
                     try:
                         data = json.loads(line)
                         entries.append(LedgerEntry(**data))
                     except (json.JSONDecodeError, TypeError, KeyError) as e:
-                        logger.warning(f"Failed to load ledger line: {e}")
+                        error_count += 1
+                        logger.warning(f"Failed to load ledger line {line_num}: {e}")
+        if error_count > 0:
+            logger.warning(f"Skipped {error_count} malformed entries out of {line_num}")
+        if self._max_entries and len(entries) > self._max_entries:
+            logger.warning(
+                f"Ledger has {len(entries)} entries, capping to {self._max_entries} most recent"
+            )
+            entries = sorted(entries, key=lambda e: e.timestamp)[-self._max_entries:]
         return entries
+
+    @property
+    def entry_count(self) -> int:
+        """Total entries on disk including those not loaded."""
+        if not self.storage_path.exists():
+            return 0
+        with open(self.storage_path, "r") as f:
+            return sum(1 for line in f if line.strip())
 
     def _rebuild_merkle_tree(self):
         """Rebuild Merkle tree from existing entries."""
@@ -380,6 +403,11 @@ class ValueLedger:
         contract_id: Optional[str] = None,
     ) -> str:
         """Accrue new value - primary entry point"""
+        if metadata:
+            metadata_str = json.dumps(metadata)
+            if len(metadata_str) > 65536:  # 64KB limit
+                raise ValueError(f"Metadata too large: {len(metadata_str)} bytes (max 65536)")
+
         vector = ValueVector(
             **{k: v for k, v in initial_vector.items() if k in ValueVector.model_fields}
         )
@@ -388,12 +416,22 @@ class ValueLedger:
         if classification < 0 or classification > 5:
             raise ValueError(f"Classification must be 0-5, got {classification}")
 
+        # Inject correlation ID if available
+        entry_metadata = metadata.copy() if metadata else {}
+        try:
+            from .security import get_correlation_id, _correlation_id
+            cid = _correlation_id.get()
+            if cid is not None:
+                entry_metadata["correlation_id"] = cid
+        except ImportError:
+            pass
+
         # Create entry first to get ID
         entry = LedgerEntry(
             intent_id=intent_id,
             memory_hash=memory_hash,
             value_vector=vector,
-            metadata=metadata or {},
+            metadata=entry_metadata,
             owner=owner,
             classification=classification,
             contract_id=contract_id,

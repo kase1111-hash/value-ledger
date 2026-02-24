@@ -21,6 +21,7 @@ import hashlib
 import json
 import logging
 import os
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any, Set
@@ -40,30 +41,36 @@ _hashes = None
 _PBKDF2HMAC = None
 
 
+_CRYPTO_LOCK = threading.Lock()
+
+
 def _try_import_cryptography():
-    """Attempt to import cryptography, returning True if successful."""
+    """Attempt to import cryptography, returning True if successful (thread-safe)."""
     global CRYPTO_AVAILABLE, _Fernet, _hashes, _PBKDF2HMAC
-    try:
-        # Try importing with a subprocess check first to avoid crashing
-        import importlib.util
+    if CRYPTO_AVAILABLE:
+        return True  # fast path, no lock
+    with _CRYPTO_LOCK:
+        if CRYPTO_AVAILABLE:  # double-checked locking
+            return True
+        try:
+            import importlib.util
 
-        spec = importlib.util.find_spec("cryptography")
-        if spec is None:
+            spec = importlib.util.find_spec("cryptography")
+            if spec is None:
+                return False
+
+            from cryptography.fernet import Fernet
+            from cryptography.hazmat.primitives import hashes
+            from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+
+            _Fernet = Fernet
+            _hashes = hashes
+            _PBKDF2HMAC = PBKDF2HMAC
+            CRYPTO_AVAILABLE = True
+            return True
+        except Exception as e:
+            logger.debug(f"Cryptography import failed: {e}")
             return False
-
-        # Try the actual imports
-        from cryptography.fernet import Fernet
-        from cryptography.hazmat.primitives import hashes
-        from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-
-        _Fernet = Fernet
-        _hashes = hashes
-        _PBKDF2HMAC = PBKDF2HMAC
-        CRYPTO_AVAILABLE = True
-        return True
-    except Exception as e:
-        logger.debug(f"Cryptography import failed: {e}")
-        return False
 
 
 # Don't auto-import cryptography at module load - it can cause panics
@@ -107,7 +114,7 @@ def _validate_storage_path(path: str, base_dir: Optional[str] = None) -> Path:
         try:
             resolved.relative_to(base_resolved)
         except ValueError:
-            raise ValueError(f"Path must be within {base_dir}")
+            raise ValueError(f"Path must be within {base_dir}") from None
 
     # Block common sensitive paths
     sensitive_patterns = [
@@ -322,7 +329,7 @@ class SignalEncryptor:
             return plaintext.decode()
         except Exception as e:
             logger.warning(f"Decryption failed: {e}")
-            raise ValueError("Decryption failed - invalid password or corrupted data")
+            raise ValueError("Decryption failed - invalid password or corrupted data") from e
 
 
 @dataclass

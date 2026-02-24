@@ -60,7 +60,7 @@ This module is part of the Agent-OS ecosystem — a natural-language-native oper
 
 ## Architecture
 
-The Value Ledger comprises 14 Python modules (~9,350 lines of code):
+The Value Ledger comprises 15 Python modules (~9,500 lines of code):
 
 | Module | Purpose |
 |--------|---------|
@@ -254,6 +254,31 @@ pytest tests/test_security.py -v
 # Run with coverage report
 pytest tests/ --cov=value_ledger --cov-report=html
 ```
+
+## Configuration
+
+All settings can be passed as function arguments. Environment variables serve as fallback defaults for deployment convenience.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VALUE_LEDGER_LOG_FORMAT` | `""` | Set to `json` for structured JSON log output |
+| `VALUE_LEDGER_LOG_LEVEL` | `INFO` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`) |
+| `VALUE_LEDGER_DRY_RUN` | `""` | Set to `1`, `true`, or `yes` to enable dry-run mode (no network calls) |
+| `VALUE_LEDGER_SIEM_ENDPOINT` | `http://localhost:8080/api/v1/events` | Boundary-SIEM HTTP endpoint |
+| `VALUE_LEDGER_SIEM_TIMEOUT` | `5.0` | SIEM request timeout in seconds |
+| `VALUE_LEDGER_DAEMON_SOCKET` | `/var/run/boundary-daemon/api.sock` | Boundary Daemon Unix socket path |
+| `VALUE_LEDGER_DAEMON_HTTP` | `http://localhost:9090/api/v1` | Boundary Daemon HTTP fallback URL |
+| `VALUE_LEDGER_DAEMON_TIMEOUT` | `2.0` | Daemon request timeout in seconds |
+| `VALUE_LEDGER_NLC_URL` | `http://localhost:5000` | NatLangChain node base URL |
+| `VALUE_LEDGER_NLC_TIMEOUT` | `30.0` | NatLangChain request timeout in seconds |
+
+## Thread Safety
+
+The Value Ledger is designed primarily for single-threaded CLI use. When using in multi-threaded applications:
+
+- Module-level singletons (embedding model, cryptography) are thread-safe via locks
+- `ValueLedger` instances are **not** thread-safe — use one instance per thread
+- `SecurityManager.get_instance()` is thread-safe
 
 ## Known Limitations (Alpha)
 

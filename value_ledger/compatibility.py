@@ -28,10 +28,6 @@ import uuid
 logger = logging.getLogger(__name__)
 
 
-# =============================================================================
-# MP-01 Negotiation & Ratification Protocol Compatibility
-# =============================================================================
-
 
 class NegotiationStatus(str, Enum):
     """Status of MP-01 negotiation."""
@@ -287,10 +283,6 @@ class MP01Formatter:
 
         return ratification
 
-
-# =============================================================================
-# Licensing and Delegation Module Compatibility
-# =============================================================================
 
 
 class LicenseType(str, Enum):
@@ -574,10 +566,6 @@ class LicenseManager:
         return [lic for lic in self._licenses.values() if receipt_id in lic.receipt_ids]
 
 
-# =============================================================================
-# External Audit System Compatibility
-# =============================================================================
-
 
 class AuditFormat(str, Enum):
     """Supported external audit formats."""
@@ -837,10 +825,6 @@ class AuditExporter:
         return [self.export_receipt(r, format) for r in receipts]
 
 
-# =============================================================================
-# Cross-Protocol Adapter
-# =============================================================================
-
 
 class ProtocolAdapter:
     """
@@ -938,10 +922,6 @@ class ProtocolAdapter:
 
         return exported
 
-
-# =============================================================================
-# Convenience Functions
-# =============================================================================
 
 
 def create_protocol_adapter(

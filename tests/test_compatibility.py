@@ -68,7 +68,6 @@ def sample_receipt():
 
 
 class TestMP01Proposal:
-    """Tests for MP-01 negotiation proposals."""
 
     def test_proposal_creation(self):
         proposal = MP01Proposal(
@@ -115,7 +114,6 @@ class TestMP01Proposal:
 
 
 class TestMP01Formatter:
-    """Tests for MP-01 formatter."""
 
     def test_create_proposal(self):
         formatter = MP01Formatter(party_id="party-a")
@@ -208,7 +206,6 @@ class TestMP01Formatter:
 
 
 class TestLicenseReference:
-    """Tests for license references."""
 
     def test_license_creation(self):
         license_ref = LicenseReference(
@@ -265,7 +262,6 @@ class TestLicenseReference:
 
 
 class TestLicenseManager:
-    """Tests for license manager."""
 
     def test_grant_license(self):
         manager = LicenseManager()
@@ -390,7 +386,6 @@ class TestLicenseManager:
 
 
 class TestAuditExporter:
-    """Tests for audit format exports."""
 
     def test_export_json_ld(self, sample_receipt):
         exporter = AuditExporter()
@@ -480,7 +475,6 @@ class TestAuditExporter:
 
 
 class TestProtocolAdapter:
-    """Tests for cross-protocol adapter."""
 
     def test_prepare_for_negotiation(self, sample_receipt):
         adapter = create_protocol_adapter(party_id="party-a")
@@ -528,7 +522,6 @@ class TestProtocolAdapter:
 
 
 class TestConvenienceFunctions:
-    """Tests for module-level convenience functions."""
 
     def test_create_protocol_adapter(self):
         adapter = create_protocol_adapter(
@@ -552,7 +545,6 @@ class TestConvenienceFunctions:
 
 
 class TestCompatibilityIntegration:
-    """Integration tests for external compatibility."""
 
     def test_full_negotiation_workflow(self, sample_receipt):
         """Test complete MP-01 negotiation workflow."""

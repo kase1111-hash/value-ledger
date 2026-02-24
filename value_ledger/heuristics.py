@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import math
+import threading
 from dataclasses import dataclass
 from typing import List, Tuple, Optional, Dict
 
@@ -26,17 +27,21 @@ except ImportError:
     _HAS_EMBEDDINGS = False
 
 
+_EMBEDDING_LOCK = threading.Lock()
+
+
 def get_embedding_model():
-    """Singleton loader for the embedding model"""
+    """Singleton loader for the embedding model (thread-safe)."""
     global _EMBEDDING_MODEL
-    if _EMBEDDING_MODEL is None:
-        if not _HAS_EMBEDDINGS:
-            raise RuntimeError("sentence-transformers not available")
-        # Lightweight, high-quality, multilingual model
-        _EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
-        # Move to GPU if available
-        if torch.cuda.is_available():
-            _EMBEDDING_MODEL = _EMBEDDING_MODEL.to("cuda")
+    if _EMBEDDING_MODEL is not None:
+        return _EMBEDDING_MODEL  # fast path, no lock
+    with _EMBEDDING_LOCK:
+        if _EMBEDDING_MODEL is None:  # double-checked locking
+            if not _HAS_EMBEDDINGS:
+                raise RuntimeError("sentence-transformers not available")
+            _EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+            if torch.cuda.is_available():
+                _EMBEDDING_MODEL = _EMBEDDING_MODEL.to("cuda")
     return _EMBEDDING_MODEL
 
 
@@ -59,8 +64,6 @@ class HeuristicScorer:
     def __call__(self, ctx: ScoringContext) -> ValueVector:
         raise NotImplementedError
 
-
-# ==================== Scorers (unchanged except Novelty) ====================
 
 
 class TimeScorer(HeuristicScorer):
@@ -390,7 +393,6 @@ class ReusabilityScorer(HeuristicScorer):
         return ValueVector(u=max(0.0, min(12.0, score)))
 
 
-# ==================== Engine ====================
 
 
 class HeuristicEngine:
@@ -398,7 +400,7 @@ class HeuristicEngine:
         self.scorers = [
             TimeScorer(),
             EffortScorer(),
-            NoveltyScorer(),  # ← Now embedding-powered!
+            NoveltyScorer(),  # TODO: Add model caching/versioning for reproducible novelty scores
             FailureScorer(),
             RiskScorer(),
             StrategyScorer(),

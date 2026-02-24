@@ -16,13 +16,17 @@ This module provides:
 
 from __future__ import annotations
 
+import contextvars
 import hashlib
 import json
 import logging
+import os
 import socket
+import threading
 import time
 import urllib.request
 import urllib.error
+import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
@@ -45,9 +49,85 @@ if not logger.handlers:
     logger.setLevel(logging.INFO)
 
 
-# =============================================================================
-# Custom Exception Hierarchy
-# =============================================================================
+_correlation_id: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+    "correlation_id", default=None
+)
+
+
+def get_correlation_id() -> str:
+    """Get or create a correlation ID for the current operation."""
+    cid = _correlation_id.get()
+    if cid is None:
+        cid = uuid.uuid4().hex[:12]
+        _correlation_id.set(cid)
+    return cid
+
+
+def set_correlation_id(cid: str) -> None:
+    """Explicitly set correlation ID (e.g., from external request)."""
+    _correlation_id.set(cid)
+
+
+@contextmanager
+def correlation_scope(cid: Optional[str] = None):
+    """Context manager that sets a correlation ID for the duration."""
+    token = _correlation_id.set(cid or uuid.uuid4().hex[:12])
+    try:
+        yield _correlation_id.get()
+    finally:
+        _correlation_id.reset(token)
+
+
+class _JSONFormatter(logging.Formatter):
+    """JSON log formatter for structured log aggregation."""
+
+    def format(self, record):
+        log_entry = {
+            "timestamp": self.formatTime(record),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno,
+        }
+        cid = _correlation_id.get()
+        if cid is not None:
+            log_entry["correlation_id"] = cid
+        return json.dumps(log_entry)
+
+
+def configure_logging(
+    json_format: Optional[bool] = None,
+    level: Optional[str] = None,
+) -> None:
+    """
+    Configure logging for all value_ledger modules.
+
+    Args:
+        json_format: Use JSON log format. Default: checks VALUE_LEDGER_LOG_FORMAT env var.
+        level: Log level. Default: checks VALUE_LEDGER_LOG_LEVEL env var, then INFO.
+    """
+    if json_format is None:
+        json_format = os.environ.get("VALUE_LEDGER_LOG_FORMAT", "").lower() == "json"
+    if level is None:
+        level = os.environ.get("VALUE_LEDGER_LOG_LEVEL", "INFO")
+
+    root_logger = logging.getLogger("value_ledger")
+    root_logger.setLevel(getattr(logging, level.upper(), logging.INFO))
+
+    root_logger.handlers.clear()
+
+    handler = logging.StreamHandler()
+    if json_format:
+        handler.setFormatter(_JSONFormatter())
+    else:
+        handler.setFormatter(logging.Formatter(
+            "[%(asctime)s] %(levelname)s [%(name)s] %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S",
+        ))
+    root_logger.addHandler(handler)
+
 
 
 class ValueLedgerError(Exception):
@@ -133,10 +213,6 @@ class RateLimitError(ValueLedgerError):
             self.details["limit"] = limit
 
 
-# =============================================================================
-# Security Event Types
-# =============================================================================
-
 
 class SecurityEventSeverity(Enum):
     """Severity levels for security events (CEF compatible)."""
@@ -183,10 +259,6 @@ class SecurityEventType(Enum):
     CONFIGURATION_CHANGE = "config_change"
     ERROR_OCCURRED = "error_occurred"
 
-
-# =============================================================================
-# Security Event
-# =============================================================================
 
 
 @dataclass
@@ -261,10 +333,6 @@ class SecurityEvent:
         )
 
 
-# =============================================================================
-# Boundary SIEM Client
-# =============================================================================
-
 
 @dataclass
 class SIEMConfig:
@@ -280,6 +348,8 @@ class SIEMConfig:
     retry_delay: float = 1.0
     batch_size: int = 100
     source_identifier: str = "value-ledger"
+    dry_run: bool = False
+    dry_run_path: str = "siem_events.jsonl"
 
 
 class BoundarySIEMClient:
@@ -297,7 +367,16 @@ class BoundarySIEMClient:
         self._connected = False
 
         if self.config.enabled:
+            # TODO: Add retry logic for transient SIEM failures
             self._test_connection()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.flush()
+        self._connected = False
+        return False
 
     def _test_connection(self) -> bool:
         """Test SIEM connectivity."""
@@ -310,7 +389,7 @@ class BoundarySIEMClient:
             req.add_header("User-Agent", "ValueLedger/1.0")
             with urllib.request.urlopen(req, timeout=2) as response:
                 self._connected = response.status == 200
-        except Exception as e:
+        except (urllib.error.URLError, socket.error, OSError) as e:
             logger.debug(f"SIEM HTTP health check failed: {e}")
             self._connected = False
 
@@ -338,6 +417,13 @@ class BoundarySIEMClient:
         """
         if not self.config.enabled:
             logger.debug(f"SIEM disabled, skipping event: {event.event_type.value}")
+            return True
+
+        if self.config.dry_run:
+            logger.info(f"[DRY RUN] SIEM event: {event.event_type.value}")
+            with open(self.config.dry_run_path, "a") as f:
+                json.dump(event.to_json(), f)
+                f.write("\n")
             return True
 
         # Update hash chain
@@ -407,7 +493,7 @@ class BoundarySIEMClient:
         except urllib.error.URLError as e:
             logger.warning(f"SIEM HTTP send failed: {e}")
             return False
-        except Exception as e:
+        except (json.JSONDecodeError, OSError) as e:
             logger.error(f"SIEM HTTP unexpected error: {e}")
             return False
 
@@ -431,7 +517,7 @@ class BoundarySIEMClient:
         except socket.error as e:
             logger.warning(f"SIEM CEF send failed: {e}")
             return False
-        except Exception as e:
+        except OSError as e:
             logger.error(f"SIEM CEF unexpected error: {e}")
             return False
 
@@ -457,10 +543,6 @@ class BoundarySIEMClient:
         )
         return self.report(event)
 
-
-# =============================================================================
-# Boundary Daemon Client
-# =============================================================================
 
 
 class BoundaryMode(Enum):
@@ -495,6 +577,7 @@ class BoundaryDaemonConfig:
     timeout: float = 2.0
     default_deny: bool = True  # Fail-closed
     cache_ttl: float = 60.0
+    dry_run: bool = False
 
 
 class BoundaryDaemonClient:
@@ -511,10 +594,25 @@ class BoundaryDaemonClient:
         self._connected = False
 
         if self.config.enabled:
+            # TODO: Add retry logic for transient daemon failures
             self._check_daemon()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._connected = False
+        self._policy_cache.clear()
+        return False
 
     def _check_daemon(self) -> bool:
         """Check if Boundary Daemon is available."""
+        if self.config.dry_run:
+            logger.info("[DRY RUN] Boundary Daemon check skipped, all operations allowed")
+            self._connected = True
+            self._current_mode = BoundaryMode.OPEN
+            return True
+
         # Try Unix socket first
         if Path(self.config.socket_path).exists():
             try:
@@ -538,8 +636,8 @@ class BoundaryDaemonClient:
                     self._current_mode = BoundaryMode(data.get("mode", "restricted"))
                     self._connected = True
                     return True
-        except Exception:
-            pass
+        except (urllib.error.URLError, socket.error, json.JSONDecodeError, OSError) as e:
+            logger.debug(f"Boundary Daemon HTTP fallback unavailable: {e}")
 
         self._connected = False
         return False
@@ -607,13 +705,13 @@ class BoundaryDaemonClient:
         if Path(self.config.socket_path).exists():
             try:
                 return self._query_socket(request_data)
-            except Exception as e:
+            except (socket.error, json.JSONDecodeError, OSError) as e:
                 logger.debug(f"Socket query failed: {e}")
 
         # Try HTTP
         try:
             return self._query_http(request_data)
-        except Exception as e:
+        except (urllib.error.URLError, json.JSONDecodeError, OSError) as e:
             logger.warning(f"HTTP policy query failed: {e}")
 
         # Default deny
@@ -737,14 +835,10 @@ class BoundaryDaemonClient:
 
             with urllib.request.urlopen(req, timeout=self.config.timeout) as response:
                 return response.status in (200, 201, 202)
-        except Exception as e:
+        except (urllib.error.URLError, socket.error, OSError) as e:
             logger.error(f"Failed to report violation: {e}")
             return False
 
-
-# =============================================================================
-# Unified Security Manager
-# =============================================================================
 
 
 class SecurityManager:
@@ -755,6 +849,7 @@ class SecurityManager:
     """
 
     _instance: Optional["SecurityManager"] = None
+    _instance_lock = threading.Lock()
 
     def __init__(
         self,
@@ -768,9 +863,12 @@ class SecurityManager:
 
     @classmethod
     def get_instance(cls) -> "SecurityManager":
-        """Get or create singleton instance."""
-        if cls._instance is None:
-            cls._instance = cls()
+        """Get or create singleton instance (thread-safe)."""
+        if cls._instance is not None:
+            return cls._instance
+        with cls._instance_lock:
+            if cls._instance is None:
+                cls._instance = cls()
         return cls._instance
 
     @classmethod
@@ -805,7 +903,8 @@ class SecurityManager:
         """
         decision = self.daemon.check_policy(action, resource, context)
 
-        # Report to SIEM
+        # Report to SIEM (include correlation ID)
+        cid = get_correlation_id()
         event = SecurityEvent(
             event_type=(
                 SecurityEventType.ACCESS_GRANTED
@@ -823,6 +922,7 @@ class SecurityManager:
                 "resource": resource,
                 "mode": decision.mode.value,
                 "reason": decision.reason,
+                "correlation_id": cid,
                 **(context or {}),
             },
         )
@@ -892,9 +992,6 @@ class SecurityManager:
         return self.siem.flush()
 
 
-# =============================================================================
-# Decorators for Protected Operations
-# =============================================================================
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -990,10 +1087,6 @@ def security_context(
         security.handle_error(e, context={"action": action, "resource": resource}, reraise=True)
 
 
-# =============================================================================
-# Convenience Functions
-# =============================================================================
-
 
 def init_security(
     siem_endpoint: Optional[str] = None,
@@ -1011,14 +1104,27 @@ def init_security(
     Returns:
         Configured SecurityManager
     """
+    dry_run = os.environ.get("VALUE_LEDGER_DRY_RUN", "").lower() in ("1", "true", "yes")
+
     siem_config = SIEMConfig(
         enabled=enabled,
-        http_endpoint=siem_endpoint or "http://localhost:8080/api/v1/events",
+        http_endpoint=(
+            siem_endpoint
+            or os.environ.get("VALUE_LEDGER_SIEM_ENDPOINT", "http://localhost:8080/api/v1/events")
+        ),
+        timeout=float(os.environ.get("VALUE_LEDGER_SIEM_TIMEOUT", "5.0")),
+        dry_run=dry_run,
     )
 
     daemon_config = BoundaryDaemonConfig(
         enabled=enabled,
-        socket_path=daemon_socket or "/var/run/boundary-daemon/api.sock",
+        socket_path=(
+            daemon_socket
+            or os.environ.get("VALUE_LEDGER_DAEMON_SOCKET", "/var/run/boundary-daemon/api.sock")
+        ),
+        http_fallback=os.environ.get("VALUE_LEDGER_DAEMON_HTTP", "http://localhost:9090/api/v1"),
+        timeout=float(os.environ.get("VALUE_LEDGER_DAEMON_TIMEOUT", "2.0")),
+        dry_run=dry_run,
     )
 
     return SecurityManager.configure(siem_config, daemon_config)

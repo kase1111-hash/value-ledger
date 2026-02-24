@@ -163,10 +163,8 @@ def custom_config():
 
 
 class TestCriteriaType:
-    """Tests for CriteriaType enumeration."""
 
     def test_criteria_types_defined(self):
-        """Test all expected criteria types are defined."""
         assert CriteriaType.COHERENCE == "coherence"
         assert CriteriaType.PROGRESSION == "progression"
         assert CriteriaType.CONSISTENCY == "consistency"
@@ -176,10 +174,8 @@ class TestCriteriaType:
 
 
 class TestSeverityLevel:
-    """Tests for SeverityLevel enumeration."""
 
     def test_severity_levels_defined(self):
-        """Test all expected severity levels are defined."""
         assert SeverityLevel.INFO == "info"
         assert SeverityLevel.WARNING == "warning"
         assert SeverityLevel.ERROR == "error"
@@ -192,10 +188,8 @@ class TestSeverityLevel:
 
 
 class TestValidationCriterion:
-    """Tests for ValidationCriterion dataclass."""
 
     def test_creation_with_defaults(self):
-        """Test creating criterion with default values."""
         criterion = ValidationCriterion(
             name="test_criterion",
             criterion_type=CriteriaType.COHERENCE,
@@ -205,7 +199,6 @@ class TestValidationCriterion:
         assert criterion.enabled is True
 
     def test_creation_with_custom_values(self):
-        """Test creating criterion with custom values."""
         criterion = ValidationCriterion(
             name="custom",
             criterion_type=CriteriaType.AUTHENTICITY,
@@ -226,10 +219,8 @@ class TestValidationCriterion:
 
 
 class TestValidationIssue:
-    """Tests for ValidationIssue dataclass."""
 
     def test_issue_creation(self):
-        """Test creating a validation issue."""
         issue = ValidationIssue(
             issue_id="issue-001",
             criterion=CriteriaType.CONSISTENCY,
@@ -241,7 +232,6 @@ class TestValidationIssue:
         assert issue.timestamp > 0
 
     def test_issue_to_dict(self):
-        """Test serializing issue to dictionary."""
         issue = ValidationIssue(
             issue_id="issue-002",
             criterion=CriteriaType.COHERENCE,
@@ -261,10 +251,8 @@ class TestValidationIssue:
 
 
 class TestCriteriaConfig:
-    """Tests for CriteriaConfig dataclass."""
 
     def test_default_config(self):
-        """Test creating default configuration."""
         config = CriteriaConfig.default()
         assert len(config.criteria) == 5
         assert config.min_signals == 2
@@ -272,7 +260,6 @@ class TestCriteriaConfig:
         assert config.duplication_threshold == 0.8
 
     def test_custom_config(self, custom_config):
-        """Test custom configuration."""
         assert len(custom_config.criteria) == 1
         assert custom_config.min_signals == 3
 
@@ -289,35 +276,29 @@ class TestCriteriaConfig:
 
 
 class TestScoreDataclasses:
-    """Tests for score dataclasses."""
 
     def test_coherence_score_defaults(self):
-        """Test CoherenceScore defaults."""
         score = CoherenceScore()
         assert score.overall == 0.0
         assert score.temporal_distribution == 0.0
         assert len(score.issues) == 0
 
     def test_progression_score_defaults(self):
-        """Test ProgressionScore defaults."""
         score = ProgressionScore()
         assert score.overall == 0.0
         assert score.temporal_flow == 0.0
 
     def test_consistency_score_defaults(self):
-        """Test ConsistencyScore defaults."""
         score = ConsistencyScore()
         assert score.overall == 0.0
         assert score.hash_uniqueness == 0.0
 
     def test_authenticity_score_defaults(self):
-        """Test AuthenticityScore defaults."""
         score = AuthenticityScore()
         assert score.overall == 0.0
         assert len(score.adversarial_patterns) == 0
 
     def test_completeness_score_defaults(self):
-        """Test CompletenessScore defaults."""
         score = CompletenessScore()
         assert score.overall == 0.0
         assert len(score.gaps) == 0
@@ -329,10 +310,8 @@ class TestScoreDataclasses:
 
 
 class TestValidationReport:
-    """Tests for ValidationReport dataclass."""
 
     def test_report_creation(self):
-        """Test creating a validation report."""
         report = ValidationReport(
             segment_id="segment-001",
             validator_id="test-validator",
@@ -342,7 +321,6 @@ class TestValidationReport:
         assert report.valid is False
 
     def test_report_add_issue(self):
-        """Test adding issues to report."""
         report = ValidationReport(segment_id="test")
         report.add_issue(
             criterion=CriteriaType.COHERENCE,
@@ -363,7 +341,6 @@ class TestValidationReport:
         assert len(report.uncertainty_markers) == 1
 
     def test_report_to_dict(self):
-        """Test serializing report to dictionary."""
         report = ValidationReport(
             segment_id="segment-001",
             validator_id="test-validator",
@@ -386,15 +363,12 @@ class TestValidationReport:
 
 
 class TestEnhancedValidator:
-    """Tests for EnhancedValidator class."""
 
     def test_validator_creation(self, default_validator):
-        """Test creating a validator."""
         assert default_validator.validator_id == "enhanced_validator"
         assert default_validator.model_version == "2.0.0"
 
     def test_validator_with_custom_config(self, custom_config):
-        """Test creating validator with custom config."""
         validator = EnhancedValidator(
             validator_id="custom",
             config=custom_config,
@@ -402,14 +376,12 @@ class TestEnhancedValidator:
         assert validator.config.min_signals == 3
 
     def test_validate_sample_segment(self, default_validator, sample_segment):
-        """Test validating a sample segment."""
         report = default_validator.validate(sample_segment)
         assert report.segment_id == "test-segment-001"
         assert report.overall_score > 0
         assert report.confidence > 0
 
     def test_validate_empty_segment(self, default_validator, empty_segment):
-        """Test validating an empty segment."""
         report = default_validator.validate(empty_segment)
         # Empty segment gets low score but not exactly 0 due to completeness calculation
         assert report.overall_score < 0.1
@@ -429,63 +401,51 @@ class TestEnhancedValidator:
 
 
 class TestCoherenceAssessment:
-    """Tests for coherence assessment."""
 
     def test_assess_coherence_with_signals(self, default_validator, sample_segment):
-        """Test coherence assessment with multiple signals."""
         report = default_validator.validate(sample_segment)
         assert report.coherence.overall > 0
         assert report.coherence.temporal_distribution > 0
 
     def test_assess_coherence_empty_segment(self, default_validator, empty_segment):
-        """Test coherence assessment with no signals."""
         report = default_validator.validate(empty_segment)
         assert report.coherence.overall == 0.0
         assert "No signals" in report.coherence.issues[0]
 
 
 class TestProgressionAssessment:
-    """Tests for progression assessment."""
 
     def test_assess_progression_ordered(self, default_validator, sample_segment):
-        """Test progression with ordered signals."""
         report = default_validator.validate(sample_segment)
         assert report.progression.temporal_flow > 0
         assert report.progression.type_variety > 0
 
     def test_assess_progression_variety(self, default_validator, sample_segment):
-        """Test type variety assessment."""
         report = default_validator.validate(sample_segment)
         # Sample has TEXT and REVISION types
         assert report.progression.type_variety > 0
 
 
 class TestConsistencyAssessment:
-    """Tests for consistency assessment."""
 
     def test_assess_consistency_unique_hashes(self, default_validator, sample_segment):
-        """Test consistency with unique hashes."""
         report = default_validator.validate(sample_segment)
         assert report.consistency.hash_uniqueness == 1.0
 
     def test_assess_consistency_duplicate_hashes(self, default_validator, duplicate_segment):
-        """Test consistency with duplicate hashes."""
         report = default_validator.validate(duplicate_segment)
         assert report.consistency.hash_uniqueness < 1.0
         assert "duplicate" in str(report.consistency.issues).lower()
 
 
 class TestAuthenticityAssessment:
-    """Tests for authenticity assessment."""
 
     def test_detect_duplication(self, default_validator, duplicate_segment):
-        """Test duplication detection."""
         report = default_validator.validate(duplicate_segment)
         # All same hash means high duplication
         assert report.authenticity.duplication_score > 0.5
 
     def test_detect_synthetic_patterns(self, default_validator, synthetic_segment):
-        """Test synthetic pattern detection."""
         report = default_validator.validate(synthetic_segment)
         # Perfectly regular timing should be flagged
         patterns = report.authenticity.adversarial_patterns
@@ -493,15 +453,12 @@ class TestAuthenticityAssessment:
 
 
 class TestCompletenessAssessment:
-    """Tests for completeness assessment."""
 
     def test_assess_completeness_sufficient_signals(self, default_validator, sample_segment):
-        """Test completeness with sufficient signals."""
         report = default_validator.validate(sample_segment)
         assert report.completeness.signal_sufficiency > 0
 
     def test_assess_completeness_insufficient_signals(self, default_validator, base_time):
-        """Test completeness with insufficient signals."""
         segment = EffortSegment(
             segment_id="few-signals",
             start_time=base_time,
@@ -520,7 +477,6 @@ class TestCompletenessAssessment:
 
 
 class TestValidityDetermination:
-    """Tests for validity determination."""
 
     def test_valid_segment(self, default_validator, sample_segment):
         """Test that good segment is valid."""
@@ -554,17 +510,14 @@ class TestValidityDetermination:
 
 
 class TestConsistencyChecker:
-    """Tests for ConsistencyChecker class."""
 
     def test_check_temporal_consistency_valid(self, sample_signals):
-        """Test temporal consistency with valid signals."""
         checker = ConsistencyChecker()
         is_consistent, issues = checker.check_temporal_consistency(sample_signals)
         assert is_consistent is True
         assert len(issues) == 0
 
     def test_check_temporal_consistency_future(self, base_time):
-        """Test detecting future timestamps."""
         checker = ConsistencyChecker()
         # Need at least 2 signals for this check
         future_signals = [
@@ -586,13 +539,11 @@ class TestConsistencyChecker:
         assert "future" in issues[0].lower()
 
     def test_check_sequence_consistency_valid(self, sample_signals):
-        """Test sequence consistency with valid signals."""
         checker = ConsistencyChecker()
         is_consistent, issues = checker.check_sequence_consistency(sample_signals)
         assert is_consistent is True
 
     def test_check_sequence_consistency_duplicates(self, base_time):
-        """Test detecting duplicate sequence numbers."""
         checker = ConsistencyChecker()
         signals = [
             EffortSignal(
@@ -615,16 +566,13 @@ class TestConsistencyChecker:
 
 
 class TestDuplicationDetector:
-    """Tests for DuplicationDetector class."""
 
     def test_detect_hash_duplication_none(self, sample_signals):
-        """Test no duplicates detected."""
         detector = DuplicationDetector()
         duplicates = detector.detect_hash_duplication(sample_signals)
         assert len(duplicates) == 0
 
     def test_detect_hash_duplication_found(self, base_time):
-        """Test detecting hash duplicates."""
         detector = DuplicationDetector()
         same_hash = hashlib.sha256(b"same").hexdigest()
         signals = [
@@ -641,7 +589,6 @@ class TestDuplicationDetector:
         assert len(duplicates) == 2  # Second and third are duplicates of first
 
     def test_detect_timing_patterns_regular(self, synthetic_segment):
-        """Test detecting regular timing patterns."""
         detector = DuplicationDetector()
         patterns = detector.detect_timing_patterns(synthetic_segment.signals)
         assert "perfectly_regular" in patterns
@@ -659,10 +606,8 @@ class TestDuplicationDetector:
 
 
 class TestConfidenceCalculator:
-    """Tests for ConfidenceCalculator class."""
 
     def test_calculate_high_confidence(self):
-        """Test calculating high confidence score."""
         calculator = ConfidenceCalculator()
         confidence = calculator.calculate(
             signal_count=10,
@@ -674,7 +619,6 @@ class TestConfidenceCalculator:
         assert confidence > 0.8
 
     def test_calculate_low_confidence(self):
-        """Test calculating low confidence score."""
         calculator = ConfidenceCalculator()
         confidence = calculator.calculate(
             signal_count=1,
@@ -686,7 +630,6 @@ class TestConfidenceCalculator:
         assert confidence < 0.5
 
     def test_calculate_with_custom_weights(self):
-        """Test with custom weights."""
         calculator = ConfidenceCalculator(
             weights={
                 "signal_count": 0.5,
@@ -710,15 +653,12 @@ class TestConfidenceCalculator:
 
 
 class TestConvenienceFunctions:
-    """Tests for convenience functions."""
 
     def test_create_enhanced_validator_default(self):
-        """Test creating validator with defaults."""
         validator = create_enhanced_validator()
         assert validator.validator_id == "enhanced_validator"
 
     def test_create_enhanced_validator_custom(self, custom_config):
-        """Test creating validator with custom config."""
         validator = create_enhanced_validator(
             validator_id="custom-001",
             config=custom_config,
@@ -727,13 +667,11 @@ class TestConvenienceFunctions:
         assert validator.config.min_signals == 3
 
     def test_validate_segment_function(self, sample_segment):
-        """Test validate_segment convenience function."""
         report = validate_segment(sample_segment)
         assert report.segment_id == "test-segment-001"
         assert report.overall_score >= 0
 
     def test_validate_segment_with_config(self, sample_segment, custom_config):
-        """Test validate_segment with custom config."""
         report = validate_segment(sample_segment, config=custom_config)
         assert report.segment_id == "test-segment-001"
 
@@ -744,7 +682,6 @@ class TestConvenienceFunctions:
 
 
 class TestMP02Compliance:
-    """Tests for MP-02 specification compliance."""
 
     def test_deterministic_summaries(self, sample_segment):
         """Per MP-02 §7: Validators MUST produce deterministic summaries."""
@@ -796,10 +733,8 @@ class TestMP02Compliance:
 
 
 class TestEdgeCases:
-    """Tests for edge cases and error handling."""
 
     def test_single_signal_segment(self, default_validator, base_time):
-        """Test segment with single signal."""
         segment = EffortSegment(
             segment_id="single-signal",
             start_time=base_time,
@@ -819,7 +754,6 @@ class TestEdgeCases:
         assert report.segment_id == "single-signal"
 
     def test_very_short_duration(self, default_validator, base_time):
-        """Test segment with very short duration."""
         segment = EffortSegment(
             segment_id="short-segment",
             start_time=base_time,
@@ -859,7 +793,6 @@ class TestEdgeCases:
         assert "unrealistic_signal_burst" in report.authenticity.adversarial_patterns
 
     def test_zero_duration_segment(self, default_validator, base_time):
-        """Test segment with zero duration."""
         segment = EffortSegment(
             segment_id="zero-duration",
             start_time=base_time,

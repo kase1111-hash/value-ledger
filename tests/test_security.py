@@ -81,7 +81,6 @@ class TestValueLedgerError:
 
 
 class TestValidationError:
-    """Tests for ValidationError."""
 
     def test_creation(self):
         error = ValidationError("Invalid field", field="username")
@@ -91,7 +90,6 @@ class TestValidationError:
 
 
 class TestStorageError:
-    """Tests for StorageError."""
 
     def test_creation(self):
         error = StorageError("Write failed", path="/tmp/test.jsonl")
@@ -100,7 +98,6 @@ class TestStorageError:
 
 
 class TestCryptographyError:
-    """Tests for CryptographyError."""
 
     def test_creation(self):
         error = CryptographyError("Encryption failed", operation="encrypt")
@@ -109,7 +106,6 @@ class TestCryptographyError:
 
 
 class TestSecurityError:
-    """Tests for SecurityError."""
 
     def test_creation(self):
         error = SecurityError("Access denied", violation_type="path_traversal")
@@ -118,7 +114,6 @@ class TestSecurityError:
 
 
 class TestConnectionProtectionError:
-    """Tests for ConnectionProtectionError."""
 
     def test_creation(self):
         error = ConnectionProtectionError("Connection blocked", policy="AIRGAP")
@@ -132,7 +127,6 @@ class TestConnectionProtectionError:
 
 
 class TestSecurityEventSeverity:
-    """Tests for SecurityEventSeverity enum."""
 
     def test_severity_values(self):
         assert SecurityEventSeverity.DEBUG.value == 0
@@ -144,7 +138,6 @@ class TestSecurityEventSeverity:
 
 
 class TestSecurityEventType:
-    """Tests for SecurityEventType enum."""
 
     def test_event_types_exist(self):
         assert SecurityEventType.ACCESS_GRANTED.value == "access_granted"
@@ -155,7 +148,6 @@ class TestSecurityEventType:
 
 
 class TestSecurityEvent:
-    """Tests for SecurityEvent dataclass."""
 
     def test_basic_creation(self):
         event = SecurityEvent(
@@ -232,7 +224,6 @@ class TestSecurityEvent:
 
 
 class TestSIEMConfig:
-    """Tests for SIEMConfig."""
 
     def test_defaults(self):
         config = SIEMConfig()
@@ -253,7 +244,6 @@ class TestSIEMConfig:
 
 
 class TestBoundarySIEMClient:
-    """Tests for BoundarySIEMClient."""
 
     def test_disabled_client(self):
         config = SIEMConfig(enabled=False)
@@ -326,7 +316,6 @@ class TestBoundarySIEMClient:
 
 
 class TestBoundaryMode:
-    """Tests for BoundaryMode enum."""
 
     def test_modes(self):
         assert BoundaryMode.OPEN.value == "open"
@@ -338,7 +327,6 @@ class TestBoundaryMode:
 
 
 class TestPolicyDecision:
-    """Tests for PolicyDecision dataclass."""
 
     def test_creation(self):
         decision = PolicyDecision(
@@ -355,7 +343,6 @@ class TestPolicyDecision:
 
 
 class TestBoundaryDaemonConfig:
-    """Tests for BoundaryDaemonConfig."""
 
     def test_defaults(self):
         config = BoundaryDaemonConfig()
@@ -365,7 +352,6 @@ class TestBoundaryDaemonConfig:
 
 
 class TestBoundaryDaemonClient:
-    """Tests for BoundaryDaemonClient."""
 
     def test_disabled_client(self):
         config = BoundaryDaemonConfig(enabled=False)
@@ -433,7 +419,6 @@ class TestBoundaryDaemonClient:
 
 
 class TestSecurityManager:
-    """Tests for SecurityManager."""
 
     def test_singleton_pattern(self):
         # Reset singleton
@@ -525,7 +510,6 @@ class TestSecurityManager:
 
 
 class TestProtectedOperationDecorator:
-    """Tests for @protected_operation decorator."""
 
     def test_successful_operation(self):
         SecurityManager._instance = None
@@ -557,7 +541,6 @@ class TestProtectedOperationDecorator:
 
 
 class TestSecurityContext:
-    """Tests for security_context context manager."""
 
     def test_successful_context(self):
         SecurityManager._instance = None
@@ -590,7 +573,6 @@ class TestSecurityContext:
 
 
 class TestConvenienceFunctions:
-    """Tests for convenience functions."""
 
     def test_init_security(self):
         SecurityManager._instance = None
@@ -637,10 +619,8 @@ class TestConvenienceFunctions:
 
 
 class TestSecurityIntegration:
-    """Integration tests for security module."""
 
     def test_full_workflow(self):
-        """Test complete security workflow."""
         SecurityManager._instance = None
 
         # Initialize
@@ -672,7 +652,6 @@ class TestSecurityIntegration:
         assert manager.flush() is True
 
     def test_error_handling_workflow(self):
-        """Test error handling through security system."""
         SecurityManager._instance = None
         manager = init_security(enabled=False)
 
@@ -689,7 +668,6 @@ class TestSecurityIntegration:
         assert manager._error_count == 3
 
     def test_cef_format_compliance(self):
-        """Verify CEF format is valid."""
         event = SecurityEvent(
             event_type=SecurityEventType.TAMPERING_DETECTED,
             severity=SecurityEventSeverity.CRITICAL,
@@ -710,3 +688,35 @@ class TestSecurityIntegration:
         assert parts[3] == "1.0"
         assert parts[4] == "tampering_detected"
         assert parts[6] == "9"  # CRITICAL severity
+
+
+# =============================================================================
+# Parametrized Boundary Value Tests
+# =============================================================================
+
+
+class TestExceptionHierarchyCodes:
+
+    @pytest.mark.parametrize("exc_class,code", [
+        (ValidationError, "VL_VALIDATION_ERROR"),
+        (StorageError, "VL_STORAGE_ERROR"),
+        (CryptographyError, "VL_CRYPTO_ERROR"),
+        (SecurityError, "VL_SECURITY_ERROR"),
+        (ConnectionProtectionError, "VL_CONNECTION_DENIED"),
+        (RateLimitError, "VL_RATE_LIMIT"),
+        (IntegrationError, "VL_INTEGRATION_ERROR"),
+    ])
+    def test_exception_code(self, exc_class, code):
+        exc = exc_class("test message")
+        assert exc.code == code
+        assert isinstance(exc, ValueLedgerError)
+
+    @pytest.mark.parametrize("exc_class", [
+        ValidationError, StorageError, CryptographyError,
+        IntegrationError, SecurityError, ConnectionProtectionError,
+        RateLimitError,
+    ])
+    def test_exception_is_value_ledger_error(self, exc_class):
+        exc = exc_class("test")
+        assert isinstance(exc, ValueLedgerError)
+        assert isinstance(exc, Exception)
