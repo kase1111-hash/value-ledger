@@ -13,7 +13,7 @@ import time
 
 logger = logging.getLogger(__name__)
 
-# Placeholder imports — will be replaced with real ones when Memory Vault exists
+# TODO: Replace stubs with real Memory Vault imports when available
 # from memory_vault.core import MemoryVault, MemoryEntry
 # from learning_contracts.engine import ConsentChecker
 
@@ -48,7 +48,7 @@ class MemoryVaultStub:
 
 # Temporary stubs — replace with real imports
 MemoryVault = MemoryVaultStub
-ConsentChecker = None  # Will have .check_access(intent_id, "novelty_scoring") -> bool
+ConsentChecker = None  # TODO: Implement consent checking via Learning Contracts
 
 
 class MemoryVaultHook:

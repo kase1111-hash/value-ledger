@@ -129,10 +129,6 @@ def configure_logging(
     root_logger.addHandler(handler)
 
 
-# =============================================================================
-# Custom Exception Hierarchy
-# =============================================================================
-
 
 class ValueLedgerError(Exception):
     """Base exception for all Value Ledger errors."""
@@ -217,10 +213,6 @@ class RateLimitError(ValueLedgerError):
             self.details["limit"] = limit
 
 
-# =============================================================================
-# Security Event Types
-# =============================================================================
-
 
 class SecurityEventSeverity(Enum):
     """Severity levels for security events (CEF compatible)."""
@@ -267,10 +259,6 @@ class SecurityEventType(Enum):
     CONFIGURATION_CHANGE = "config_change"
     ERROR_OCCURRED = "error_occurred"
 
-
-# =============================================================================
-# Security Event
-# =============================================================================
 
 
 @dataclass
@@ -345,10 +333,6 @@ class SecurityEvent:
         )
 
 
-# =============================================================================
-# Boundary SIEM Client
-# =============================================================================
-
 
 @dataclass
 class SIEMConfig:
@@ -383,6 +367,7 @@ class BoundarySIEMClient:
         self._connected = False
 
         if self.config.enabled:
+            # TODO: Add retry logic for transient SIEM failures
             self._test_connection()
 
     def __enter__(self):
@@ -559,10 +544,6 @@ class BoundarySIEMClient:
         return self.report(event)
 
 
-# =============================================================================
-# Boundary Daemon Client
-# =============================================================================
-
 
 class BoundaryMode(Enum):
     """Boundary Daemon protection modes."""
@@ -613,6 +594,7 @@ class BoundaryDaemonClient:
         self._connected = False
 
         if self.config.enabled:
+            # TODO: Add retry logic for transient daemon failures
             self._check_daemon()
 
     def __enter__(self):
@@ -858,10 +840,6 @@ class BoundaryDaemonClient:
             return False
 
 
-# =============================================================================
-# Unified Security Manager
-# =============================================================================
-
 
 class SecurityManager:
     """
@@ -1014,9 +992,6 @@ class SecurityManager:
         return self.siem.flush()
 
 
-# =============================================================================
-# Decorators for Protected Operations
-# =============================================================================
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -1111,10 +1086,6 @@ def security_context(
     except Exception as e:
         security.handle_error(e, context={"action": action, "resource": resource}, reraise=True)
 
-
-# =============================================================================
-# Convenience Functions
-# =============================================================================
 
 
 def init_security(

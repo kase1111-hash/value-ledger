@@ -196,7 +196,7 @@ class IntentLogConnector:
         elif event.event_type in {"intent_completed", "intent_abandoned"}:
             self._on_intent_completed(event)
 
-        # "intent_updated" could trigger partial accruals in future
+        # TODO: Implement partial accruals on intent_updated events
         # For now, we only accrue on completion/abandonment
 
     @property

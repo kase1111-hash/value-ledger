@@ -89,7 +89,7 @@ def compute_content_hash(content: Optional[str]) -> Optional[str]:
 def compute_timestamp_proof(timestamp: float, entry_id: str) -> str:
     """
     Generate a timestamp proof.
-    In production, this could anchor to an external timestamping service.
+    TODO: Anchor to external timestamping service (RFC 3161) for production.
     For now, creates a local signed proof.
     """
     proof_data = f"{timestamp}:{entry_id}"

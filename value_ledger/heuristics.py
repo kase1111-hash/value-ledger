@@ -65,8 +65,6 @@ class HeuristicScorer:
         raise NotImplementedError
 
 
-# ==================== Scorers (unchanged except Novelty) ====================
-
 
 class TimeScorer(HeuristicScorer):
     def __call__(self, ctx: ScoringContext) -> ValueVector:
@@ -395,7 +393,6 @@ class ReusabilityScorer(HeuristicScorer):
         return ValueVector(u=max(0.0, min(12.0, score)))
 
 
-# ==================== Engine ====================
 
 
 class HeuristicEngine:
@@ -403,7 +400,7 @@ class HeuristicEngine:
         self.scorers = [
             TimeScorer(),
             EffortScorer(),
-            NoveltyScorer(),  # ← Now embedding-powered!
+            NoveltyScorer(),  # TODO: Add model caching/versioning for reproducible novelty scores
             FailureScorer(),
             RiskScorer(),
             StrategyScorer(),

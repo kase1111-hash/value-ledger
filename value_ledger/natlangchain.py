@@ -225,7 +225,7 @@ class NLCClient:
         self,
         base_url: Optional[str] = None,
         timeout: Optional[float] = None,
-        allow_private: bool = True,  # Default True for backward compatibility
+        allow_private: bool = True,  # TODO: Default to False once NatLangChain is deployed publicly
         max_response_size: int = MAX_RESPONSE_SIZE,
         dry_run: bool = False,
     ):
