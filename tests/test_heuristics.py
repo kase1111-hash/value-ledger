@@ -40,8 +40,6 @@ from value_ledger.core import ValueVector
 
 
 class TestScoringContext:
-    """Tests for ScoringContext dataclass."""
-
     def test_minimal_context(self):
         """Minimal context with required fields."""
         ctx = ScoringContext(
@@ -81,8 +79,6 @@ class TestScoringContext:
 
 
 class TestTimeScorer:
-    """Tests for TimeScorer."""
-
     def test_no_end_time(self):
         """No end time returns zero."""
         scorer = TimeScorer()
@@ -155,10 +151,7 @@ class TestTimeScorer:
 
 
 class TestEffortScorer:
-    """Tests for EffortScorer."""
-
     def test_no_time_no_effort(self):
-        """No time means no effort."""
         scorer = EffortScorer()
         ctx = ScoringContext(intent_id="test", start_time=1000.0)
         result = scorer(ctx)
@@ -221,7 +214,6 @@ class TestEffortScorer:
         assert result_15.e >= result_10.e
 
     def test_keystroke_density_bonus_high(self):
-        """High keystroke density gets bonus."""
         scorer = EffortScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -234,7 +226,6 @@ class TestEffortScorer:
         assert result.e > 0
 
     def test_keystroke_density_penalty_low(self):
-        """Low keystroke density gets penalty."""
         scorer = EffortScorer()
         ctx_low = ScoringContext(
             intent_id="test",
@@ -272,10 +263,7 @@ class TestEffortScorer:
 
 
 class TestNoveltyScorer:
-    """Tests for NoveltyScorer."""
-
     def test_no_content_high_novelty(self):
-        """No content defaults to high novelty."""
         scorer = NoveltyScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -286,7 +274,6 @@ class TestNoveltyScorer:
         assert result.n == 8.5
 
     def test_no_previous_memories_high_novelty(self):
-        """No previous memories means high novelty."""
         scorer = NoveltyScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -298,7 +285,6 @@ class TestNoveltyScorer:
         assert result.n == 8.5
 
     def test_fallback_jaccard_no_content(self):
-        """Fallback Jaccard with no content."""
         scorer = NoveltyScorer()
         result = scorer._fallback_jaccard(
             ScoringContext(intent_id="test", start_time=0)
@@ -306,7 +292,6 @@ class TestNoveltyScorer:
         assert result.n == 8.0
 
     def test_fallback_jaccard_short_content(self):
-        """Fallback Jaccard with very short content."""
         scorer = NoveltyScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -369,10 +354,7 @@ class TestNoveltyScorer:
 
 
 class TestFailureScorer:
-    """Tests for FailureScorer."""
-
     def test_dead_end_high_score(self):
-        """Dead end gets high failure score."""
         scorer = FailureScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -383,7 +365,6 @@ class TestFailureScorer:
         assert result.f == 9.0
 
     def test_failure_tag_high_score(self):
-        """Failure tag gets high failure score."""
         scorer = FailureScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -394,7 +375,6 @@ class TestFailureScorer:
         assert result.f == 9.0
 
     def test_partial_medium_score(self):
-        """Partial completion gets medium score."""
         scorer = FailureScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -405,7 +385,6 @@ class TestFailureScorer:
         assert result.f == 6.0
 
     def test_stuck_medium_score(self):
-        """Stuck gets medium score."""
         scorer = FailureScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -416,7 +395,6 @@ class TestFailureScorer:
         assert result.f == 6.0
 
     def test_breakthrough_lower_score(self):
-        """Breakthrough gets lower failure score."""
         scorer = FailureScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -427,7 +405,6 @@ class TestFailureScorer:
         assert result.f == 4.0
 
     def test_insight_lower_score(self):
-        """Insight gets lower failure score."""
         scorer = FailureScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -438,7 +415,6 @@ class TestFailureScorer:
         assert result.f == 4.0
 
     def test_no_tags_default_score(self):
-        """No tags gets default score."""
         scorer = FailureScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -449,7 +425,6 @@ class TestFailureScorer:
         assert result.f == 1.5
 
     def test_none_tags_default_score(self):
-        """None tags gets default score."""
         scorer = FailureScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -460,7 +435,6 @@ class TestFailureScorer:
         assert result.f == 1.5
 
     def test_case_insensitive(self):
-        """Tags are case-insensitive."""
         scorer = FailureScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -477,10 +451,7 @@ class TestFailureScorer:
 
 
 class TestRiskScorer:
-    """Tests for RiskScorer."""
-
     def test_explicit_risk_level(self):
-        """Explicit risk level is used."""
         scorer = RiskScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -491,7 +462,6 @@ class TestRiskScorer:
         assert result.r == 8.0
 
     def test_high_risk_phrase(self):
-        """High risk phrases are detected."""
         scorer = RiskScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -502,7 +472,6 @@ class TestRiskScorer:
         assert result.r == 9.0
 
     def test_medium_risk_phrase(self):
-        """Medium risk phrases are detected."""
         scorer = RiskScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -525,7 +494,6 @@ class TestRiskScorer:
         assert result.r == 9.5
 
     def test_no_risk_zero_score(self):
-        """No risk indicators gives zero score."""
         scorer = RiskScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -553,8 +521,6 @@ class TestRiskScorer:
 
 
 class TestStrategyScorer:
-    """Tests for StrategyScorer."""
-
     def test_base_score(self):
         """Empty content gets base score."""
         scorer = StrategyScorer()
@@ -567,7 +533,6 @@ class TestStrategyScorer:
         assert result.s == 3.0
 
     def test_architecture_indicator(self):
-        """Architecture keyword boosts score."""
         scorer = StrategyScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -578,7 +543,6 @@ class TestStrategyScorer:
         assert result.s >= 6.0
 
     def test_second_order_high_score(self):
-        """Second-order thinking gets high score."""
         scorer = StrategyScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -589,7 +553,6 @@ class TestStrategyScorer:
         assert result.s >= 8.0
 
     def test_meta_indicator(self):
-        """Meta-level thinking indicator."""
         scorer = StrategyScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -600,7 +563,6 @@ class TestStrategyScorer:
         assert result.s >= 7.0
 
     def test_long_content_bonus(self):
-        """Long content gets bonus."""
         scorer = StrategyScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -650,10 +612,7 @@ class TestStrategyScorer:
 
 
 class TestReusabilityScorer:
-    """Tests for ReusabilityScorer."""
-
     def test_no_content_zero_score(self):
-        """No content gets zero score."""
         scorer = ReusabilityScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -664,7 +623,6 @@ class TestReusabilityScorer:
         assert result.u == 0.0
 
     def test_base_score(self):
-        """Basic content gets base score."""
         scorer = ReusabilityScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -675,7 +633,6 @@ class TestReusabilityScorer:
         assert result.u >= 2.0
 
     def test_pattern_indicator(self):
-        """Pattern keyword boosts score."""
         scorer = ReusabilityScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -686,7 +643,6 @@ class TestReusabilityScorer:
         assert result.u > 2.0
 
     def test_abstraction_high_score(self):
-        """Abstraction keywords get high score."""
         scorer = ReusabilityScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -697,7 +653,6 @@ class TestReusabilityScorer:
         assert result.u >= 7.0
 
     def test_domain_agnostic_bonus(self):
-        """Domain-agnostic content gets bonus."""
         scorer = ReusabilityScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -708,7 +663,6 @@ class TestReusabilityScorer:
         assert result.u >= 6.0
 
     def test_specific_penalty(self):
-        """Specific/one-off content gets penalty."""
         scorer = ReusabilityScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -720,7 +674,6 @@ class TestReusabilityScorer:
         assert result.u < 3.0
 
     def test_code_blocks_bonus(self):
-        """Code blocks indicate reusability."""
         scorer = ReusabilityScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -731,7 +684,6 @@ class TestReusabilityScorer:
         assert result.u >= 3.5
 
     def test_class_definition_bonus(self):
-        """Class definitions indicate reusability."""
         scorer = ReusabilityScorer()
         ctx = ScoringContext(
             intent_id="test",
@@ -759,15 +711,12 @@ class TestReusabilityScorer:
 
 
 class TestHeuristicEngine:
-    """Tests for HeuristicEngine integration."""
-
     def test_engine_has_all_scorers(self):
         """Engine has all seven scorers."""
         engine = HeuristicEngine()
         assert len(engine.scorers) == 7
 
     def test_engine_combines_scores(self):
-        """Engine combines all scorer outputs."""
         engine = HeuristicEngine()
         ctx = ScoringContext(
             intent_id="test",
@@ -805,7 +754,6 @@ class TestHeuristicEngine:
         assert result.total() <= 70.0
 
     def test_engine_user_override(self):
-        """User override is applied."""
         engine = HeuristicEngine()
         ctx = ScoringContext(
             intent_id="test",
@@ -844,8 +792,6 @@ class TestHeuristicEngine:
 
 
 class TestHeuristicScorerBase:
-    """Tests for base HeuristicScorer class."""
-
     def test_abstract_method(self):
         """Base class __call__ raises NotImplementedError."""
         scorer = HeuristicScorer()
@@ -860,10 +806,7 @@ class TestHeuristicScorerBase:
 
 
 class TestEdgeCases:
-    """Edge case and boundary tests."""
-
     def test_very_short_duration(self):
-        """Very short duration handled correctly."""
         engine = HeuristicEngine()
         ctx = ScoringContext(
             intent_id="test",
@@ -874,7 +817,6 @@ class TestEdgeCases:
         assert result.total() > 0
 
     def test_unicode_content(self):
-        """Unicode content handled correctly."""
         engine = HeuristicEngine()
         ctx = ScoringContext(
             intent_id="test",
@@ -886,7 +828,6 @@ class TestEdgeCases:
         assert result.total() > 0
 
     def test_empty_strings(self):
-        """Empty strings handled correctly."""
         engine = HeuristicEngine()
         ctx = ScoringContext(
             intent_id="",
@@ -898,7 +839,6 @@ class TestEdgeCases:
         assert result.total() >= 0
 
     def test_none_values(self):
-        """None values handled correctly."""
         engine = HeuristicEngine()
         ctx = ScoringContext(
             intent_id="test",
@@ -912,7 +852,6 @@ class TestEdgeCases:
         assert result.total() >= 0
 
     def test_extreme_interruptions(self):
-        """Extreme interruption count handled."""
         engine = HeuristicEngine()
         ctx = ScoringContext(
             intent_id="test",
@@ -922,3 +861,97 @@ class TestEdgeCases:
         )
         result = engine.score(ctx)
         assert result.e <= 22.0  # Capped
+
+
+# =============================================================================
+# Parametrized Boundary Value Tests
+# =============================================================================
+
+
+class TestTimeScorerBoundaries:
+
+    @pytest.mark.parametrize("duration_hours,expected_min,expected_max", [
+        (0.0, 0.0, 0.2),
+        (0.01, 0.5, 2.0),
+        (1.0, 8.0, 9.0),
+        (8.0, 12.0, 15.0),
+        (100.0, 14.0, 15.0),
+    ])
+    def test_time_score_ranges(self, duration_hours, expected_min, expected_max):
+        scorer = TimeScorer()
+        start = 1000.0
+        end = start + (duration_hours * 3600.0)
+        ctx = ScoringContext(intent_id="test", start_time=start, end_time=end)
+        result = scorer(ctx)
+        assert expected_min <= result.t <= expected_max, (
+            f"duration={duration_hours}h: t={result.t} not in [{expected_min}, {expected_max}]"
+        )
+
+
+class TestEffortScorerBoundaries:
+
+    @pytest.mark.parametrize("interruptions,expected_min,expected_max", [
+        (0, 8.0, 10.0),
+        (1, 10.0, 13.0),
+        (5, 15.0, 22.0),
+        (10, 22.0, 22.0),   # Hits cap
+        (20, 22.0, 22.0),   # Hits cap
+    ])
+    def test_interruption_scaling(self, interruptions, expected_min, expected_max):
+        scorer = EffortScorer()
+        ctx = ScoringContext(
+            intent_id="test",
+            start_time=1000.0,
+            end_time=4600.0,  # 1 hour
+            interruptions=interruptions,
+        )
+        result = scorer(ctx)
+        assert expected_min <= result.e <= expected_max, (
+            f"interruptions={interruptions}: e={result.e} not in [{expected_min}, {expected_max}]"
+        )
+
+
+class TestFailureScorerTags:
+
+    @pytest.mark.parametrize("tags,expected_f", [
+        (["dead_end"], 9.0),
+        (["failure"], 9.0),
+        (["partial"], 6.0),
+        (["stuck"], 6.0),
+        (["breakthrough"], 4.0),
+        (["insight"], 4.0),
+        ([], 1.5),
+        (None, 1.5),
+    ])
+    def test_failure_tag_scores(self, tags, expected_f):
+        scorer = FailureScorer()
+        ctx = ScoringContext(
+            intent_id="test",
+            start_time=1000.0,
+            outcome_tags=tags,
+        )
+        result = scorer(ctx)
+        assert result.f == expected_f
+
+
+class TestRiskScorerPhrases:
+
+    @pytest.mark.parametrize("phrase,min_risk", [
+        ("all in on this approach", 9.0),
+        ("bet everything on it", 9.0),
+        ("existential threat", 9.0),
+        ("this is a gamble", 6.0),
+        ("bold move here", 6.0),
+        ("normal everyday work", 0.0),
+    ])
+    def test_risk_phrase_detection(self, phrase, min_risk):
+        scorer = RiskScorer()
+        ctx = ScoringContext(
+            intent_id="test",
+            start_time=1000.0,
+            memory_content=phrase,
+        )
+        result = scorer(ctx)
+        assert result.r >= min_risk, (
+            f"phrase='{phrase}': r={result.r} < {min_risk}"
+        )

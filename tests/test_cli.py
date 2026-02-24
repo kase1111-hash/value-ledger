@@ -34,7 +34,6 @@ from value_ledger.core import ValueLedger, ValueVector
 
 
 class TestFormatTimestamp:
-    """Tests for timestamp formatting."""
 
     def test_format_timestamp(self):
         """Timestamp is formatted correctly."""
@@ -53,7 +52,6 @@ class TestFormatTimestamp:
 
 
 class TestFormatValueVector:
-    """Tests for value vector formatting."""
 
     def test_format_value_vector(self):
         """Value vector is formatted correctly."""
@@ -80,7 +78,6 @@ class TestFormatValueVector:
 
 
 class TestLedgerCLI:
-    """Tests for LedgerCLI class."""
 
     @pytest.fixture
     def cli_with_entries(self):
@@ -121,7 +118,6 @@ class TestLedgerCLI:
 
 
 class TestLedgerCLIStats:
-    """Tests for stats command."""
 
     @pytest.fixture
     def cli_with_entries(self):
@@ -156,7 +152,6 @@ class TestLedgerCLIStats:
 
 
 class TestLedgerCLIQuery:
-    """Tests for query command."""
 
     @pytest.fixture
     def cli_with_entries(self):
@@ -203,7 +198,6 @@ class TestLedgerCLIQuery:
 
 
 class TestLedgerCLIExport:
-    """Tests for export command."""
 
     @pytest.fixture
     def cli_with_entries(self):
@@ -217,7 +211,6 @@ class TestLedgerCLIExport:
             os.remove(path)
 
     def test_export_json(self, cli_with_entries, capsys):
-        """Export to JSON format."""
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
             output_path = f.name
 
@@ -235,7 +228,6 @@ class TestLedgerCLIExport:
                 os.remove(output_path)
 
     def test_export_csv(self, cli_with_entries, capsys):
-        """Export to CSV format."""
         with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as f:
             output_path = f.name
 
@@ -253,7 +245,6 @@ class TestLedgerCLIExport:
                 os.remove(output_path)
 
     def test_export_merkle(self, cli_with_entries, capsys):
-        """Export Merkle tree data."""
         with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
             output_path = f.name
 
@@ -273,7 +264,6 @@ class TestLedgerCLIExport:
 
 
 class TestLedgerCLIShow:
-    """Tests for show command."""
 
     @pytest.fixture
     def cli_with_entry(self):
@@ -302,7 +292,6 @@ class TestLedgerCLIShow:
 
 
 class TestLedgerCLIRevoke:
-    """Tests for revoke command."""
 
     @pytest.fixture
     def cli_with_entry(self):
@@ -331,7 +320,6 @@ class TestLedgerCLIRevoke:
 
 
 class TestLedgerCLIProof:
-    """Tests for proof command."""
 
     @pytest.fixture
     def cli_with_entry(self):
@@ -370,7 +358,6 @@ class TestLedgerCLIProof:
 
 
 class TestMainFunction:
-    """Tests for main() entry point."""
 
     def test_help_flag(self, capsys):
         """--help shows usage."""
@@ -394,7 +381,6 @@ class TestMainFunction:
         assert "Unknown command" in captured.out or "unknown" in captured.out.lower()
 
     def test_stats_command(self, capsys):
-        """Stats command via main()."""
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as f:
             path = f.name
         try:
@@ -408,7 +394,6 @@ class TestMainFunction:
                 os.remove(path)
 
     def test_query_command_with_options(self, capsys):
-        """Query command with options via main()."""
         with tempfile.NamedTemporaryFile(suffix=".jsonl", delete=False) as f:
             path = f.name
         try:
@@ -524,7 +509,6 @@ class TestMainFunction:
 
 
 class TestDemoCommand:
-    """Tests for demo command."""
 
     def test_demo_runs(self, capsys):
         """Demo command runs without error."""
@@ -535,7 +519,6 @@ class TestDemoCommand:
         assert "Demo" in captured.out or "entry" in captured.out.lower()
 
     def test_demo_via_main(self, capsys):
-        """Demo command via main()."""
         with patch.object(sys, "argv", ["value-ledger", "demo"]):
             main()
         captured = capsys.readouterr()
@@ -543,7 +526,6 @@ class TestDemoCommand:
 
 
 class TestPrintUsage:
-    """Tests for usage printing."""
 
     def test_print_usage(self, capsys):
         """Usage is printed correctly."""
@@ -561,7 +543,6 @@ class TestPrintUsage:
 
 
 class TestEdgeCases:
-    """Edge case tests."""
 
     def test_ledger_lazy_loading(self):
         """Ledger is lazily loaded on first access."""

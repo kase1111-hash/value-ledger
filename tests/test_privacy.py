@@ -39,7 +39,6 @@ from value_ledger.privacy import (
 
 
 class TestObservationConsent:
-    """Tests for observation consent management."""
 
     def test_consent_creation_defaults_to_pending(self):
         consent = ObservationConsent(human_id="human-001")
@@ -86,7 +85,6 @@ class TestObservationConsent:
 
 @pytest.mark.skipif(not CRYPTO_AVAILABLE, reason="cryptography library not available")
 class TestSignalEncryptor:
-    """Tests for signal encryption/decryption."""
 
     def test_encrypt_and_decrypt(self):
         encryptor = SignalEncryptor()
@@ -145,7 +143,6 @@ class TestSignalEncryptorNoLibrary:
 
 
 class TestPrivacyPolicy:
-    """Tests for privacy policy configuration."""
 
     def test_default_policy(self):
         policy = PrivacyPolicy()
@@ -170,7 +167,6 @@ class TestPrivacyPolicy:
 
 
 class TestPrivacyFilter:
-    """Tests for privacy filtering of signals and receipts."""
 
     def test_filter_signal_removes_content_by_default(self):
         filter_ = PrivacyFilter()
@@ -237,7 +233,6 @@ class TestPrivacyFilter:
 
 
 class TestConsentRegistry:
-    """Tests for consent registry management."""
 
     def test_grant_consent(self):
         registry = ConsentRegistry()
@@ -330,7 +325,6 @@ class TestConsentRegistry:
 
 
 class TestAgencyController:
-    """Tests for agency controller (human control over observation)."""
 
     def test_revoke_future_observation(self):
         """Per MP-02 §12: Humans MAY revoke future observation."""
@@ -404,7 +398,6 @@ class TestAgencyController:
 
 
 class TestPrivacyIntegration:
-    """Integration tests for privacy controls."""
 
     def test_full_privacy_workflow(self):
         """Test complete privacy workflow: consent -> observe -> revoke."""
@@ -443,7 +436,6 @@ class TestPrivacyIntegration:
 
     @pytest.mark.skipif(not CRYPTO_AVAILABLE, reason="cryptography library not available")
     def test_encrypt_decrypt_workflow(self):
-        """Test signal encryption and decryption."""
         content = "Sensitive signal content that should be protected"
         password = "secure-password-123"
 

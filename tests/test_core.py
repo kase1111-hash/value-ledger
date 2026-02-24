@@ -46,7 +46,6 @@ from value_ledger.core import (
 
 
 class TestGenerateEntryId:
-    """Tests for entry ID generation."""
 
     def test_deterministic_id(self):
         """Same input produces same ID."""
@@ -72,83 +71,67 @@ class TestGenerateEntryId:
 
 
 class TestValidateLedgerPath:
-    """Tests for path validation security."""
 
     def test_valid_path(self):
-        """Valid path is accepted."""
         with tempfile.TemporaryDirectory() as tmpdir:
             path = _validate_ledger_path(f"{tmpdir}/ledger.jsonl")
             assert path.name == "ledger.jsonl"
 
     def test_null_byte_rejected(self):
-        """Null bytes are rejected."""
         with pytest.raises(ValueError, match="Invalid characters"):
             _validate_ledger_path("/tmp/test\x00.jsonl")
 
     def test_etc_path_rejected(self):
-        """Access to /etc/ is rejected."""
         with pytest.raises(ValueError, match="sensitive path"):
             _validate_ledger_path("/etc/passwd.jsonl")
 
     def test_proc_path_rejected(self):
-        """Access to /proc/ is rejected."""
         with pytest.raises(ValueError, match="sensitive path"):
             _validate_ledger_path("/proc/self/environ")
 
     def test_ssh_path_rejected(self):
-        """Access to .ssh is rejected."""
         with pytest.raises(ValueError, match="sensitive path"):
             _validate_ledger_path("/home/user/.ssh/id_rsa")
 
     def test_root_path_rejected(self):
-        """Cannot use root as storage path."""
         with pytest.raises(ValueError, match="Cannot use root"):
             _validate_ledger_path("/")
 
     def test_relative_path_resolved(self):
-        """Relative paths are resolved to absolute."""
         path = _validate_ledger_path("./ledger.jsonl")
         assert path.is_absolute()
 
 
 class TestComputeContentHash:
-    """Tests for content hashing."""
 
     def test_hash_content(self):
-        """Content is hashed correctly."""
         hash1 = compute_content_hash("test content")
         assert hash1 is not None
         assert len(hash1) == 64  # SHA-256 hex
 
     def test_empty_content_returns_none(self):
-        """Empty content returns None."""
         assert compute_content_hash("") is None
         assert compute_content_hash(None) is None
 
     def test_deterministic_hash(self):
-        """Same content produces same hash."""
         hash1 = compute_content_hash("same content")
         hash2 = compute_content_hash("same content")
         assert hash1 == hash2
 
 
 class TestComputeTimestampProof:
-    """Tests for timestamp proof generation."""
 
     def test_proof_generation(self):
-        """Timestamp proof is generated."""
         proof = compute_timestamp_proof(1234567890.0, "entry_123")
         assert proof is not None
         assert len(proof) == 64
 
     def test_deterministic_proof(self):
-        """Same inputs produce same proof."""
         proof1 = compute_timestamp_proof(1234567890.0, "entry_123")
         proof2 = compute_timestamp_proof(1234567890.0, "entry_123")
         assert proof1 == proof2
 
     def test_different_timestamp_different_proof(self):
-        """Different timestamp produces different proof."""
         proof1 = compute_timestamp_proof(1234567890.0, "entry_123")
         proof2 = compute_timestamp_proof(1234567891.0, "entry_123")
         assert proof1 != proof2
@@ -160,15 +143,12 @@ class TestComputeTimestampProof:
 
 
 class TestMerkleTree:
-    """Tests for Merkle tree implementation."""
 
     def test_empty_tree_has_no_root(self):
-        """Empty tree has no root."""
         tree = MerkleTree()
         assert tree.get_root() is None
 
     def test_single_leaf(self):
-        """Single leaf tree works correctly."""
         tree = MerkleTree()
         idx = tree.add_leaf("data_1")
         assert idx == 0
@@ -177,7 +157,6 @@ class TestMerkleTree:
         assert len(root) == 64
 
     def test_two_leaves(self):
-        """Two-leaf tree computes correct root."""
         tree = MerkleTree()
         tree.add_leaf("data_1")
         tree.add_leaf("data_2")
@@ -194,7 +173,6 @@ class TestMerkleTree:
         assert root is not None
 
     def test_power_of_two_leaves(self):
-        """Power of 2 leaves work correctly."""
         tree = MerkleTree()
         for i in range(8):
             tree.add_leaf(f"data_{i}")
@@ -202,7 +180,6 @@ class TestMerkleTree:
         assert root is not None
 
     def test_root_cached(self):
-        """Root is cached after computation."""
         tree = MerkleTree()
         tree.add_leaf("data_1")
         tree.add_leaf("data_2")
@@ -212,7 +189,6 @@ class TestMerkleTree:
         assert tree._root is not None
 
     def test_cache_invalidated_on_add(self):
-        """Cache is invalidated when adding new leaf."""
         tree = MerkleTree()
         tree.add_leaf("data_1")
         root1 = tree.get_root()
@@ -222,7 +198,6 @@ class TestMerkleTree:
         assert root1 != root2
 
     def test_get_proof_invalid_index(self):
-        """Invalid index returns empty proof."""
         tree = MerkleTree()
         tree.add_leaf("data_1")
         proof = tree.get_proof(-1)
@@ -231,7 +206,6 @@ class TestMerkleTree:
         assert proof == []
 
     def test_get_proof_single_leaf(self):
-        """Proof for single leaf tree."""
         tree = MerkleTree()
         tree.add_leaf("data_1")
         proof = tree.get_proof(0)
@@ -239,7 +213,6 @@ class TestMerkleTree:
         assert isinstance(proof, list)
 
     def test_get_proof_two_leaves(self):
-        """Proof for two-leaf tree."""
         tree = MerkleTree()
         tree.add_leaf("data_1")
         tree.add_leaf("data_2")
@@ -251,7 +224,6 @@ class TestMerkleTree:
         assert proof1[0]["position"] == "left"
 
     def test_verify_proof_valid(self):
-        """Valid proof verifies correctly."""
         tree = MerkleTree()
         tree.add_leaf("data_1")
         tree.add_leaf("data_2")
@@ -267,7 +239,6 @@ class TestMerkleTree:
         assert tree.verify_proof(leaf_hash, proof, root)
 
     def test_verify_proof_invalid_hash(self):
-        """Invalid hash fails verification."""
         tree = MerkleTree()
         tree.add_leaf("data_1")
         tree.add_leaf("data_2")
@@ -276,7 +247,6 @@ class TestMerkleTree:
         assert not tree.verify_proof("invalid_hash", proof, root)
 
     def test_deterministic_tree(self):
-        """Same data produces same tree."""
         tree1 = MerkleTree()
         tree2 = MerkleTree()
         for i in range(5):
@@ -291,10 +261,8 @@ class TestMerkleTree:
 
 
 class TestValueVector:
-    """Tests for ValueVector operations."""
 
     def test_default_values(self):
-        """Default values are zero."""
         vec = ValueVector()
         assert vec.t == 0.0
         assert vec.e == 0.0
@@ -305,7 +273,6 @@ class TestValueVector:
         assert vec.u == 0.0
 
     def test_custom_values(self):
-        """Custom values are set correctly."""
         vec = ValueVector(t=1.0, e=2.0, n=3.0, f=4.0, r=5.0, s=6.0, u=7.0)
         assert vec.t == 1.0
         assert vec.e == 2.0
@@ -316,7 +283,6 @@ class TestValueVector:
         assert vec.u == 7.0
 
     def test_total(self):
-        """Total computes sum of all values."""
         vec = ValueVector(t=1.0, e=2.0, n=3.0, f=4.0, r=5.0, s=6.0, u=7.0)
         assert vec.total() == 28.0
 
@@ -326,7 +292,6 @@ class TestValueVector:
             ValueVector(t=-1.0)
 
     def test_apply_subjective_weights(self):
-        """Subjective weights are applied correctly."""
         vec = ValueVector(t=10.0, e=10.0, n=10.0)
         weights = {"t": 2.0, "e": 0.5}
         weighted = vec.apply_subjective_weights(weights)
@@ -335,7 +300,6 @@ class TestValueVector:
         assert weighted.n == 10.0  # No weight = 1.0
 
     def test_adjust_for_supply(self):
-        """Supply factors reduce values correctly."""
         vec = ValueVector(t=10.0, e=10.0, n=10.0)
         supply = {"t": 2.0, "e": 5.0}
         adjusted = vec.adjust_for_supply(supply)
@@ -344,7 +308,6 @@ class TestValueVector:
         assert adjusted.n == 10.0  # No factor = 1.0
 
     def test_model_dump(self):
-        """Model dump returns dictionary."""
         vec = ValueVector(t=1.0, e=2.0)
         data = vec.model_dump()
         assert data["t"] == 1.0
@@ -357,10 +320,8 @@ class TestValueVector:
 
 
 class TestLedgerEntry:
-    """Tests for LedgerEntry creation and validation."""
 
     def test_basic_entry(self):
-        """Basic entry is created correctly."""
         entry = LedgerEntry(
             intent_id="test_intent",
             value_vector=ValueVector(t=5.0),
@@ -371,13 +332,11 @@ class TestLedgerEntry:
         assert entry.id is not None
 
     def test_auto_generated_id(self):
-        """ID is auto-generated if not provided."""
         entry = LedgerEntry(intent_id="test", value_vector=ValueVector())
         assert entry.id is not None
         assert len(entry.id) == 64
 
     def test_explicit_id(self):
-        """Explicit ID is preserved."""
         entry = LedgerEntry(
             id="custom_id_12345",
             intent_id="test",
@@ -386,7 +345,6 @@ class TestLedgerEntry:
         assert entry.id == "custom_id_12345"
 
     def test_parent_id_sync(self):
-        """parent_id and parent_ids are synchronized."""
         entry = LedgerEntry(
             intent_id="test",
             value_vector=ValueVector(),
@@ -395,7 +353,6 @@ class TestLedgerEntry:
         assert "parent_1" in entry.parent_ids
 
     def test_parent_ids_sync(self):
-        """parent_ids populates parent_id."""
         entry = LedgerEntry(
             intent_id="test",
             value_vector=ValueVector(),
@@ -404,7 +361,6 @@ class TestLedgerEntry:
         assert entry.parent_id == "parent_1"
 
     def test_classification_bounds(self):
-        """Classification must be 0-5."""
         entry = LedgerEntry(
             intent_id="test",
             value_vector=ValueVector(),
@@ -413,7 +369,6 @@ class TestLedgerEntry:
         assert entry.classification == 3
 
     def test_proof_data_default(self):
-        """ProofData is created by default."""
         entry = LedgerEntry(intent_id="test", value_vector=ValueVector())
         assert entry.proof is not None
         assert isinstance(entry.proof, ProofData)
@@ -425,7 +380,6 @@ class TestLedgerEntry:
 
 
 class TestValueLedger:
-    """Tests for ValueLedger operations."""
 
     @pytest.fixture
     def temp_ledger(self):
@@ -438,11 +392,9 @@ class TestValueLedger:
             os.remove(path)
 
     def test_create_empty_ledger(self, temp_ledger):
-        """Empty ledger is created correctly."""
         assert len(temp_ledger.entries) == 0
 
     def test_accrue_entry(self, temp_ledger):
-        """Entry is accrued correctly."""
         entry_id = temp_ledger.accrue(
             intent_id="test_intent",
             initial_vector={"t": 5.0, "e": 3.0},
@@ -454,7 +406,6 @@ class TestValueLedger:
         assert entry.value_vector.e == 3.0
 
     def test_accrue_with_content_hash(self, temp_ledger):
-        """Content hash is computed for proof."""
         entry_id = temp_ledger.accrue(
             intent_id="test_intent",
             initial_vector={"t": 5.0},
@@ -464,7 +415,6 @@ class TestValueLedger:
         assert entry.proof.content_hash is not None
 
     def test_accrue_with_owner(self, temp_ledger):
-        """Owner is set correctly."""
         entry_id = temp_ledger.accrue(
             intent_id="test_intent",
             initial_vector={"t": 5.0},
@@ -476,7 +426,6 @@ class TestValueLedger:
         assert entry.classification == 2
 
     def test_accrue_invalid_classification(self, temp_ledger):
-        """Invalid classification raises error."""
         with pytest.raises(ValueError, match="Classification must be 0-5"):
             temp_ledger.accrue(
                 intent_id="test",
@@ -485,11 +434,9 @@ class TestValueLedger:
             )
 
     def test_get_entry_not_found(self, temp_ledger):
-        """Non-existent entry returns None."""
         assert temp_ledger.get_entry("nonexistent") is None
 
     def test_merkle_tree_updated(self, temp_ledger):
-        """Merkle tree is updated on accrue."""
         temp_ledger.accrue(intent_id="test1", initial_vector={"t": 1.0})
         root1 = temp_ledger.get_merkle_root()
         temp_ledger.accrue(intent_id="test2", initial_vector={"t": 2.0})
@@ -497,7 +444,6 @@ class TestValueLedger:
         assert root1 != root2
 
     def test_get_merkle_proof(self, temp_ledger):
-        """Merkle proof can be retrieved."""
         entry_id = temp_ledger.accrue(
             intent_id="test",
             initial_vector={"t": 5.0},
@@ -509,7 +455,6 @@ class TestValueLedger:
         assert "root" in proof
 
     def test_verify_entry_proof(self, temp_ledger):
-        """Entry proof verifies correctly."""
         entry_id = temp_ledger.accrue(
             intent_id="test",
             initial_vector={"t": 5.0},
@@ -539,7 +484,6 @@ class TestValueLedger:
 
 
 class TestValueLedgerRevocation:
-    """Tests for entry revocation."""
 
     @pytest.fixture
     def temp_ledger(self):
@@ -550,7 +494,6 @@ class TestValueLedgerRevocation:
             os.remove(path)
 
     def test_revoke_entry(self, temp_ledger):
-        """Entry can be revoked."""
         entry_id = temp_ledger.accrue(
             intent_id="test",
             initial_vector={"t": 5.0},
@@ -563,12 +506,10 @@ class TestValueLedgerRevocation:
         assert entry.revoked_at is not None
 
     def test_revoke_nonexistent_entry(self, temp_ledger):
-        """Revoking nonexistent entry returns False."""
         result = temp_ledger.revoke("nonexistent")
         assert result is False
 
     def test_revoke_already_revoked(self, temp_ledger):
-        """Revoking already revoked entry returns True."""
         entry_id = temp_ledger.accrue(
             intent_id="test",
             initial_vector={"t": 5.0},
@@ -578,7 +519,6 @@ class TestValueLedgerRevocation:
         assert result is True
 
     def test_revoke_with_children(self, temp_ledger):
-        """Child entries can be revoked with parent."""
         parent_id = temp_ledger.accrue(
             intent_id="parent",
             initial_vector={"t": 5.0},
@@ -597,7 +537,6 @@ class TestValueLedgerRevocation:
 
 
 class TestValueLedgerAggregation:
-    """Tests for entry aggregation."""
 
     @pytest.fixture
     def temp_ledger(self):
@@ -608,7 +547,6 @@ class TestValueLedgerAggregation:
             os.remove(path)
 
     def test_aggregate_sum(self, temp_ledger):
-        """Sum aggregation works correctly."""
         id1 = temp_ledger.accrue(intent_id="t1", initial_vector={"t": 5.0, "e": 3.0})
         id2 = temp_ledger.accrue(intent_id="t2", initial_vector={"t": 3.0, "e": 2.0})
 
@@ -620,7 +558,6 @@ class TestValueLedgerAggregation:
         assert agg.aggregation_rule == "sum"
 
     def test_aggregate_max(self, temp_ledger):
-        """Max aggregation works correctly."""
         id1 = temp_ledger.accrue(intent_id="t1", initial_vector={"t": 5.0, "e": 3.0})
         id2 = temp_ledger.accrue(intent_id="t2", initial_vector={"t": 3.0, "e": 7.0})
 
@@ -632,7 +569,6 @@ class TestValueLedgerAggregation:
         assert agg.aggregation_rule == "max"
 
     def test_aggregate_weighted(self, temp_ledger):
-        """Weighted aggregation works correctly."""
         id1 = temp_ledger.accrue(intent_id="t1", initial_vector={"t": 10.0})
         id2 = temp_ledger.accrue(intent_id="t2", initial_vector={"t": 20.0})
 
@@ -647,19 +583,16 @@ class TestValueLedgerAggregation:
         assert abs(agg.value_vector.t - 17.5) < 0.01
 
     def test_aggregate_invalid_rule(self, temp_ledger):
-        """Invalid aggregation rule raises error."""
         id1 = temp_ledger.accrue(intent_id="t1", initial_vector={"t": 5.0})
 
         with pytest.raises(ValueError, match="Invalid aggregation rule"):
             temp_ledger.aggregate_entries([id1], rule="invalid")
 
     def test_aggregate_empty_list(self, temp_ledger):
-        """Empty entry list raises error."""
         with pytest.raises(ValueError, match="at least one entry"):
             temp_ledger.aggregate_entries([], rule="sum")
 
     def test_aggregate_revoked_entry(self, temp_ledger):
-        """Cannot aggregate revoked entries."""
         id1 = temp_ledger.accrue(intent_id="t1", initial_vector={"t": 5.0})
         temp_ledger.revoke(id1)
 
@@ -667,7 +600,6 @@ class TestValueLedgerAggregation:
             temp_ledger.aggregate_entries([id1], rule="sum")
 
     def test_aggregate_inherits_classification(self, temp_ledger):
-        """Aggregated entry inherits max classification."""
         id1 = temp_ledger.accrue(
             intent_id="t1",
             initial_vector={"t": 5.0},
@@ -686,7 +618,6 @@ class TestValueLedgerAggregation:
 
 
 class TestValueLedgerAccessControl:
-    """Tests for access control."""
 
     @pytest.fixture
     def temp_ledger(self):
@@ -697,7 +628,6 @@ class TestValueLedgerAccessControl:
             os.remove(path)
 
     def test_check_access_owner(self, temp_ledger):
-        """Owner always has access."""
         entry_id = temp_ledger.accrue(
             intent_id="test",
             initial_vector={"t": 5.0},
@@ -707,7 +637,6 @@ class TestValueLedgerAccessControl:
         assert temp_ledger.check_access(entry_id, requester_owner="user_1")
 
     def test_check_access_clearance(self, temp_ledger):
-        """Non-owner needs sufficient clearance."""
         entry_id = temp_ledger.accrue(
             intent_id="test",
             initial_vector={"t": 5.0},
@@ -722,7 +651,6 @@ class TestValueLedgerAccessControl:
         )
 
     def test_transfer_ownership(self, temp_ledger):
-        """Ownership can be transferred."""
         entry_id = temp_ledger.accrue(
             intent_id="test",
             initial_vector={"t": 5.0},
@@ -736,7 +664,6 @@ class TestValueLedgerAccessControl:
         assert entry.owner == "user_2"
 
     def test_transfer_ownership_wrong_owner(self, temp_ledger):
-        """Cannot transfer if not current owner."""
         entry_id = temp_ledger.accrue(
             intent_id="test",
             initial_vector={"t": 5.0},
@@ -748,7 +675,6 @@ class TestValueLedgerAccessControl:
         assert result is False
 
     def test_cannot_transfer_revoked(self, temp_ledger):
-        """Cannot transfer revoked entry."""
         entry_id = temp_ledger.accrue(
             intent_id="test",
             initial_vector={"t": 5.0},
@@ -765,17 +691,14 @@ class TestValueLedgerAccessControl:
 
 
 class TestClockMonitor:
-    """Tests for clock monitoring."""
 
     def test_valid_timestamp(self):
-        """Valid timestamp passes check."""
         monitor = ClockMonitor()
         result = monitor.check_timestamp(time.time())
         assert result["valid"]
         assert len(result["issues"]) == 0
 
     def test_future_timestamp(self):
-        """Future timestamp is flagged."""
         monitor = ClockMonitor(max_future_seconds=10)
         future_time = time.time() + 100
         result = monitor.check_timestamp(future_time)
@@ -783,7 +706,6 @@ class TestClockMonitor:
         assert any(i["type"] == "future_timestamp" for i in result["issues"])
 
     def test_clock_regression(self):
-        """Clock regression is detected."""
         monitor = ClockMonitor(max_drift_seconds=60)
         # Set a known last time
         monitor.last_known_time = time.time()
@@ -793,14 +715,12 @@ class TestClockMonitor:
         assert any(i["type"] == "clock_regression" for i in result["issues"])
 
     def test_drift_history(self):
-        """Drift events are recorded."""
         monitor = ClockMonitor(max_future_seconds=10)
         monitor.check_timestamp(time.time() + 100)
         history = monitor.get_drift_history()
         assert len(history) == 1
 
     def test_reset(self):
-        """Monitor can be reset."""
         monitor = ClockMonitor()
         monitor.check_timestamp(time.time() + 1000)
         monitor.reset()
@@ -814,10 +734,8 @@ class TestClockMonitor:
 
 
 class TestSourceValidator:
-    """Tests for source validation."""
 
     def test_validate_valid_entry(self):
-        """Valid entry passes validation."""
         validator = SourceValidator()
         entry = LedgerEntry(
             intent_id="test",
@@ -837,7 +755,6 @@ class TestSourceValidator:
             )
 
     def test_validate_aggregation(self):
-        """Aggregation validation checks all entries."""
         validator = SourceValidator()
         entries = [
             LedgerEntry(intent_id="t1", value_vector=ValueVector(t=5.0), classification=2),
@@ -848,7 +765,6 @@ class TestSourceValidator:
         assert result["max_classification"] == 4
 
     def test_validate_aggregation_insufficient_clearance(self):
-        """Insufficient clearance fails aggregation."""
         validator = SourceValidator()
         entries = [
             LedgerEntry(intent_id="t1", value_vector=ValueVector(t=5.0), classification=5),
@@ -864,7 +780,6 @@ class TestSourceValidator:
 
 
 class TestFailureModeHandler:
-    """Tests for failure mode handling."""
 
     @pytest.fixture
     def handler(self):
@@ -877,7 +792,6 @@ class TestFailureModeHandler:
             os.remove(path)
 
     def test_safe_accrue_success(self, handler):
-        """Safe accrue succeeds for valid input."""
         result = handler.safe_accrue(
             intent_id="test",
             initial_vector={"t": 5.0},
@@ -886,7 +800,6 @@ class TestFailureModeHandler:
         assert result["entry_id"] is not None
 
     def test_safe_accrue_handles_exceptions(self, handler):
-        """Safe accrue handles exceptions gracefully."""
         # Pass an invalid keyword argument to trigger an exception
         result = handler.safe_accrue(
             intent_id="test",
@@ -899,13 +812,121 @@ class TestFailureModeHandler:
         assert result["entry_id"] is None
 
     def test_health_report(self, handler):
-        """Health report is generated."""
         report = handler.get_health_report()
         assert "clock_health" in report
         assert "validation_health" in report
         assert "overall_status" in report
 
     def test_health_report_healthy(self, handler):
-        """Healthy system reports healthy status."""
         report = handler.get_health_report()
         assert report["overall_status"] == "healthy"
+
+
+# =============================================================================
+# Parametrized Boundary Value Tests
+# =============================================================================
+
+
+class TestValueVectorBoundaries:
+
+    @pytest.mark.parametrize("field,value,should_pass", [
+        ("t", 0.0, True),
+        ("t", -0.1, False),
+        ("t", 1000.0, True),
+        ("e", 0.0, True),
+        ("e", -1.0, False),
+        ("n", -1.0, False),
+        ("n", 0.0, True),
+        ("f", 0.0, True),
+        ("f", -0.5, False),
+        ("r", 0.0, True),
+        ("r", -0.01, False),
+        ("s", 0.0, True),
+        ("s", -999.0, False),
+        ("u", 0.0, True),
+        ("u", -0.1, False),
+    ])
+    def test_field_ge_constraint(self, field, value, should_pass):
+        if should_pass:
+            vv = ValueVector(**{field: value})
+            assert getattr(vv, field) == value
+        else:
+            with pytest.raises(Exception):
+                ValueVector(**{field: value})
+
+
+class TestClassificationBoundaries:
+
+    @pytest.mark.parametrize("classification,valid", [
+        (0, True), (1, True), (3, True), (5, True),
+        (-1, False), (6, False), (100, False),
+    ])
+    def test_classification_validation(self, classification, valid):
+        if valid:
+            entry = LedgerEntry(
+                intent_id="test",
+                value_vector=ValueVector(),
+                classification=classification,
+            )
+            assert entry.classification == classification
+        else:
+            with pytest.raises(Exception):
+                LedgerEntry(
+                    intent_id="test",
+                    value_vector=ValueVector(),
+                    classification=classification,
+                )
+
+
+class TestAggregationRuleBoundaries:
+
+    @pytest.mark.parametrize("rule", ["sum", "max", "weighted"])
+    def test_valid_aggregation_rules(self, rule):
+        entry = LedgerEntry(
+            intent_id="test",
+            value_vector=ValueVector(),
+            aggregation_rule=rule,
+        )
+        assert entry.aggregation_rule == rule
+
+    @pytest.mark.parametrize("rule", ["average", "median", "invalid"])
+    def test_invalid_aggregation_rules(self, rule):
+        with pytest.raises(Exception):
+            LedgerEntry(
+                intent_id="test",
+                value_vector=ValueVector(),
+                aggregation_rule=rule,
+            )
+
+
+class TestMerkleTreeSizes:
+
+    @pytest.mark.parametrize("num_leaves", [1, 2, 3, 4, 7, 8, 15, 16, 100])
+    def test_merkle_tree_various_sizes(self, num_leaves):
+        tree = MerkleTree()
+        for i in range(num_leaves):
+            tree.add_leaf(f"leaf_{i}")
+
+        root = tree.get_root()
+        assert root is not None
+        assert len(root) == 64  # SHA-256 hex length
+
+        # Verify proof for each leaf
+        for i in range(num_leaves):
+            proof = tree.get_proof(i)
+            leaf_hash = tree.leaves[i]
+            assert tree.verify_proof(leaf_hash, proof, root)
+
+
+class TestPathTraversalPrevention:
+
+    @pytest.mark.parametrize("malicious_path", [
+        "/etc/passwd",
+        "../../../etc/shadow",
+        "/proc/self/environ",
+        "/dev/null",
+        "path\x00injection",
+    ])
+    def test_path_traversal_blocked(self, malicious_path):
+        with pytest.raises(ValueError):
+            _validate_ledger_path(malicious_path)
