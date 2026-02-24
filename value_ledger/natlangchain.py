@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import time
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict, Any, Tuple
@@ -222,27 +223,39 @@ class NLCClient:
 
     def __init__(
         self,
-        base_url: str = "http://localhost:5000",
-        timeout: float = 30.0,
+        base_url: Optional[str] = None,
+        timeout: Optional[float] = None,
         allow_private: bool = True,  # Default True for backward compatibility
         max_response_size: int = MAX_RESPONSE_SIZE,
+        dry_run: bool = False,
     ):
         """
         Initialize NatLangChain client.
 
         Args:
-            base_url: Base URL of NatLangChain API
-            timeout: Request timeout in seconds
+            base_url: Base URL of NatLangChain API (falls back to VALUE_LEDGER_NLC_URL env var)
+            timeout: Request timeout in seconds (falls back to VALUE_LEDGER_NLC_TIMEOUT env var)
             allow_private: If False, block requests to private/internal IPs (SSRF protection)
             max_response_size: Maximum response size in bytes (prevents memory exhaustion)
+            dry_run: If True, log operations locally instead of sending over the network
         """
-        self.base_url = base_url.rstrip("/")
-        self.timeout = timeout
+        self.base_url = (
+            base_url or os.environ.get("VALUE_LEDGER_NLC_URL", "http://localhost:5000")
+        ).rstrip("/")
+        self.timeout = timeout or float(os.environ.get("VALUE_LEDGER_NLC_TIMEOUT", "30.0"))
         self.allow_private = allow_private
         self.max_response_size = max_response_size
+        self.dry_run = dry_run
 
-        # Validate URL on initialization
-        _validate_url(self.base_url, allow_private=allow_private)
+        # Validate URL on initialization (skip in dry-run mode)
+        if not dry_run:
+            _validate_url(self.base_url, allow_private=allow_private)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return False
 
     def _read_response(self, response) -> bytes:
         """
@@ -275,6 +288,11 @@ class NLCClient:
 
         Returns anchor_id on success.
         """
+        if self.dry_run:
+            anchor_id = hashlib.sha256(json.dumps(record.to_dict()).encode()).hexdigest()[:16]
+            logger.info(f"[DRY RUN] NLC anchor: {anchor_id}")
+            return AnchorResult(success=True, anchor_id=f"dry_run_{anchor_id}")
+
         try:
             data = json.dumps(record.to_dict()).encode("utf-8")
             req = urllib.request.Request(

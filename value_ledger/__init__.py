@@ -112,6 +112,11 @@ from .validation import (
     validate_segment,
 )
 from .security import (
+    # Logging & Tracing
+    configure_logging,
+    get_correlation_id,
+    set_correlation_id,
+    correlation_scope,
     # Exceptions
     ValueLedgerError,
     ValidationError,
@@ -246,6 +251,11 @@ __all__ = [
     "ConfidenceCalculator",
     "create_enhanced_validator",
     "validate_segment",
+    # Logging & Tracing
+    "configure_logging",
+    "get_correlation_id",
+    "set_correlation_id",
+    "correlation_scope",
     # Security & Error Handling
     "ValueLedgerError",
     "ValidationError",

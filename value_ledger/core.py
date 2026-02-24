@@ -416,12 +416,22 @@ class ValueLedger:
         if classification < 0 or classification > 5:
             raise ValueError(f"Classification must be 0-5, got {classification}")
 
+        # Inject correlation ID if available
+        entry_metadata = metadata.copy() if metadata else {}
+        try:
+            from .security import get_correlation_id, _correlation_id
+            cid = _correlation_id.get()
+            if cid is not None:
+                entry_metadata["correlation_id"] = cid
+        except ImportError:
+            pass
+
         # Create entry first to get ID
         entry = LedgerEntry(
             intent_id=intent_id,
             memory_hash=memory_hash,
             value_vector=vector,
-            metadata=metadata or {},
+            metadata=entry_metadata,
             owner=owner,
             classification=classification,
             contract_id=contract_id,
